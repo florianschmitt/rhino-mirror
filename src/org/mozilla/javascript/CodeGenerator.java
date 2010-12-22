@@ -349,6 +349,7 @@ class CodeGenerator extends Icode {
             break;
 
           case Token.DEBUGGER:
+            updateLineNumber(node);
             addIcode(Icode_DEBUGGER);
             break;
 

@@ -68,6 +68,7 @@ import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.*;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,6 +79,7 @@ import java.util.EventObject;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.Set;
 import java.io.*;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreePath;
@@ -152,13 +154,13 @@ public class SwingGui extends JFrame implements GuiCallback {
     /**
      * Hash table of internal frame names to the internal frames themselves.
      */
-    private final Map<String,JFrame> toplevels = 
+    private final Map<String,JFrame> toplevels =
         Collections.synchronizedMap(new HashMap<String,JFrame>());
 
     /**
      * Hash table of script URLs to their internal frames.
      */
-    private final Map<String,FileWindow> fileWindows = 
+    private final Map<String,FileWindow> fileWindows =
         Collections.synchronizedMap(new HashMap<String,FileWindow>());
 
 
@@ -493,8 +495,8 @@ public class SwingGui extends JFrame implements GuiCallback {
             w = getFileWindow(sourceUrl);
         }
         if (lineNumber > -1) {
-            int start = w.getPosition(lineNumber-1);
-            int end = w.getPosition(lineNumber)-1;
+            int start = w.getLineStartOffset(lineNumber-1);
+            int end = w.getLineStartOffset(lineNumber)-1;
             w.textArea.select(start);
             w.textArea.setCaretPosition(start);
             w.textArea.moveCaretPosition(end);
@@ -526,15 +528,7 @@ public class SwingGui extends JFrame implements GuiCallback {
             if (currentWindow != null) {
                 currentWindow.setPosition(-1);
             }
-            try {
-                w.setPosition(w.textArea.getLineStartOffset(line-1));
-            } catch (BadLocationException exc) {
-                try {
-                    w.setPosition(w.textArea.getLineStartOffset(0));
-                } catch (BadLocationException ee) {
-                    w.setPosition(-1);
-                }
-            }
+            w.setPosition(w.getLineStartOffset(line-1));
         }
         desk.add(w);
         if (line != -1) {
@@ -578,23 +572,18 @@ public class SwingGui extends JFrame implements GuiCallback {
      */
     private void setFilePosition(FileWindow w, int line) {
         boolean activate = true;
-        JTextArea ta = w.textArea;
-        try {
-            if (line == -1) {
-                w.setPosition(-1);
-                if (currentWindow == w) {
-                    currentWindow = null;
-                }
-            } else {
-                int loc = ta.getLineStartOffset(line-1);
-                if (currentWindow != null && currentWindow != w) {
-                    currentWindow.setPosition(-1);
-                }
-                w.setPosition(loc);
-                currentWindow = w;
+        if (line == -1) {
+            w.setPosition(-1);
+            if (currentWindow == w) {
+                currentWindow = null;
             }
-        } catch (BadLocationException exc) {
-            // fix me
+        } else {
+            int loc = w.getLineStartOffset(line-1);
+            if (currentWindow != null && currentWindow != w) {
+                currentWindow.setPosition(-1);
+            }
+            w.setPosition(loc);
+            currentWindow = w;
         }
         if (activate) {
             if (w.isIcon()) {
@@ -1389,7 +1378,7 @@ class FilePopupMenu extends JPopupMenu {
      * The popup x position.
      */
     int x;
-    
+
     /**
      * The popup y position.
      */
@@ -1422,7 +1411,7 @@ class FilePopupMenu extends JPopupMenu {
  * Text area to display script source.
  */
 class FileTextArea
-    extends JTextArea
+    extends JTextPane
     implements ActionListener, PopupMenuListener, KeyListener, MouseListener {
 
     /**
@@ -1453,19 +1442,37 @@ class FileTextArea
     }
 
     /**
+     * Required to allow horizontal scroll.
+     */
+    @Override
+    public boolean getScrollableTracksViewportWidth() {
+        // allow scroll (i.e. return false) when this is wider than parent
+        return getWidth() < getParent().getWidth();
+    }
+
+    /**
+     * Required to allow horizontal scroll.
+     */
+    @Override
+    public void setSize(Dimension d) {
+        // if parent viewport is wider than this, then stretch this
+        super.setSize(Math.max(getParent().getWidth(), d.width), d.height);
+    }
+
+    /**
      * Moves the selection to the given offset.
      */
     public void select(int pos) {
         if (pos >= 0) {
             try {
-                int line = getLineOfOffset(pos);
+                int line = w.getLineOfOffset(pos);
                 Rectangle rect = modelToView(pos);
                 if (rect == null) {
                     select(pos, pos);
                 } else {
                     try {
                         Rectangle nrect =
-                            modelToView(getLineStartOffset(line + 1));
+                            modelToView(w.getLineStartOffset(line + 1));
                         if (nrect != null) {
                             rect = nrect;
                         }
@@ -1566,10 +1573,7 @@ class FileTextArea
         popup.setVisible(false);
         String cmd = e.getActionCommand();
         int line = -1;
-        try {
-            line = getLineOfOffset(pos);
-        } catch (Exception exc) {
-        }
+        line = w.getLineOfOffset(pos);
         if (cmd.equals("Set Breakpoint")) {
             w.setBreakPoint(line + 1);
         } else if (cmd.equals("Clear Breakpoint")) {
@@ -1957,7 +1961,7 @@ class FileHeader extends JPanel implements MouseListener {
         setFont(font);
         FontMetrics metrics = getFontMetrics(font);
         int h = metrics.getHeight();
-        int lineCount = textArea.getLineCount() + 1;
+        int lineCount = fileWindow.getLineCount() + 1;
         String dummy = Integer.toString(lineCount);
         if (dummy.length() < 2) {
             dummy = "99";
@@ -1984,7 +1988,7 @@ class FileHeader extends JPanel implements MouseListener {
         g.fillRect(clip.x, clip.y, clip.width, clip.height);
         int ascent = metrics.getMaxAscent();
         int h = metrics.getHeight();
-        int lineCount = textArea.getLineCount() + 1;
+        int lineCount = fileWindow.getLineCount() + 1;
         String dummy = Integer.toString(lineCount);
         if (dummy.length() < 2) {
             dummy = "99";
@@ -1994,17 +1998,14 @@ class FileHeader extends JPanel implements MouseListener {
         int width = getWidth();
         if (endLine > lineCount) endLine = lineCount;
         for (int i = startLine; i < endLine; i++) {
-            String text;
-            int pos = -2;
-            try {
-                pos = textArea.getLineStartOffset(i);
-            } catch (BadLocationException ignored) {
+            int pos = fileWindow.getLineStartOffset(i);
+            if (pos == -1) {
+                pos--; // don't want it match when fileWindow.currentPos == -1
             }
             boolean isBreakPoint = fileWindow.isBreakPoint(i + 1);
-            text = Integer.toString(i + 1) + " ";
             int y = i * h;
             g.setColor(Color.blue);
-            g.drawString(text, 0, y + ascent);
+            g.drawString(Integer.toString(i + 1) + " ", 0, y + ascent);
             int x = width - ascent;
             if (isBreakPoint) {
                 g.setColor(new Color(0x80, 0x00, 0x00));
@@ -2043,7 +2044,7 @@ class FileHeader extends JPanel implements MouseListener {
      */
     public void mouseEntered(MouseEvent e) {
     }
-    
+
     /**
      * Called when a mouse button is pressed.
      */
@@ -2090,6 +2091,81 @@ class FileHeader extends JPanel implements MouseListener {
  * An internal frame for script files.
  */
 class FileWindow extends JInternalFrame implements ActionListener {
+    // could use TokenStream#isKeyword() if it was public
+    private static Set<String> KEYWORDS = new HashSet<String>(Arrays.asList(
+            new String[] {
+                "abstract",
+                "boolean",
+                "break",
+                "byte",
+                "case",
+                "catch",
+                "char",
+                "class",
+                "const",
+                "continue",
+                "debugger",
+                "default",
+                "delete",
+                "do",
+                "double",
+                "else",
+                "enum",
+                "export",
+                "extends",
+                "false",
+                "final",
+                "finally",
+                "float",
+                "for",
+                "function",
+                "goto",
+                "if",
+                "implements",
+                "import",
+                "in",
+                "instanceof",
+                "int",
+                "interface",
+                "long",
+                "native",
+                "new",
+                "null",
+                "package",
+                "private",
+                "protected",
+                "public",
+                "return",
+                "short",
+                "static",
+                "super",
+                "switch",
+                "synchronized",
+                "this",
+                "throw",
+                "throws",
+                "transient",
+                "true",
+                "try",
+                "typeof",
+                "var",
+                "void",
+                "volatile",
+                "while",
+                "with"
+            }));
+    private static final SimpleAttributeSet KEYWORD = new SimpleAttributeSet();
+    private static final SimpleAttributeSet JAVADOC = new SimpleAttributeSet();
+    private static final SimpleAttributeSet COMMENT = new SimpleAttributeSet();
+    private static final SimpleAttributeSet QUOTED = new SimpleAttributeSet();
+
+    static {
+        // use same color scheme as eclipse
+        StyleConstants.setForeground(KEYWORD, new Color(127, 0, 85));
+        StyleConstants.setForeground(JAVADOC, new Color(63, 95, 191));
+        StyleConstants.setForeground(COMMENT, new Color(63, 127, 125));
+        StyleConstants.setForeground(QUOTED, new Color(42, 0, 255));
+    }
 
     /**
      * Serializable magic number.
@@ -2115,7 +2191,7 @@ class FileWindow extends JInternalFrame implements ActionListener {
      * The FileHeader that is the gutter for {@link #textArea}.
      */
     private FileHeader fileHeader;
-    
+
     /**
      * Scroll pane for containing {@link #textArea}.
      */
@@ -2125,6 +2201,16 @@ class FileWindow extends JInternalFrame implements ActionListener {
      * The current offset position.
      */
     int currentPos;
+
+    /**
+     * Offsets for start of each line in {@link #textArea}.
+     */
+    private int[] lineStartOffsets = new int[16];
+
+    /**
+     *  Number of lines.
+     */
+    private int lineCount = 0;
 
     /**
      * Loads the file.
@@ -2140,15 +2226,30 @@ class FileWindow extends JInternalFrame implements ActionListener {
     }
 
     /**
-     * Returns the offset position for the given line.
+     * Returns the offset position for the given line or -1 for invalid line.
      */
-    public int getPosition(int line) {
-        int result = -1;
-        try {
-            result = textArea.getLineStartOffset(line);
-        } catch (javax.swing.text.BadLocationException exc) {
+    public int getLineStartOffset(int line) {
+        if (line > 0 && line < lineCount) {
+            return lineStartOffsets[line];
+        } else {
+            return -1;
         }
-        return result;
+    }
+
+    /**
+     * Returns line count.
+     */
+    public int getLineCount() {
+        return lineCount;
+    }
+
+    /**
+     * Return line that corresponds to given offset
+     */
+    public int getLineOfOffset(int offset) {
+        int i = 0;
+        while (i < lineCount && offset < lineStartOffsets[i++]);
+        return i + 1;
     }
 
     /**
@@ -2204,8 +2305,6 @@ class FileWindow extends JInternalFrame implements ActionListener {
         updateToolTip();
         currentPos = -1;
         textArea = new FileTextArea(this);
-        textArea.setRows(24);
-        textArea.setColumns(80);
         p = new JScrollPane();
         fileHeader = new FileHeader(this);
         p.setViewportView(textArea);
@@ -2255,9 +2354,101 @@ class FileWindow extends JInternalFrame implements ActionListener {
                 pos = currentPos;
             }
             textArea.select(pos);
+
+            // re-calculate lineOffsets (must normalize linesep)
+            lineCount = 1;
+            int offset = 0;
+
+            for (int i = 0; i < newText.length(); i++) {
+                char c = newText.charAt(i);
+                // treat CRLF as single char
+                if (c == '\n' && i > 0 && newText.charAt(i - 1) == '\r') {
+                    continue;
+                }
+                offset++;
+                if (c == '\r' || c == '\n') {
+                    // resize if needed
+                    if (lineCount == lineStartOffsets.length) {
+                        int[] tmp = new int[lineStartOffsets.length * 2];
+                        System.arraycopy(lineStartOffsets, 0,
+                                tmp, 0, lineStartOffsets.length);
+                        lineStartOffsets = tmp;
+                    }
+                    lineStartOffsets[lineCount++] = offset;
+                }
+            }
+            hilight();
         }
         fileHeader.update();
         fileHeader.repaint();
+    }
+
+    /**
+     * Apply syntax higlight to {@link #textArea}
+     */
+    private void hilight() {
+        StyledDocument doc = textArea.getStyledDocument();
+        String text = "";
+        try {
+            text = doc.getText(0, doc.getLength());
+        } catch (BadLocationException e) {}
+        // parse JS and set colours
+        int pos = 0;
+        while (pos < text.length()) {
+            char c = text.charAt(pos);
+            SimpleAttributeSet style;
+            int start = pos;
+            if (Character.isJavaIdentifierStart(c)) {
+                // read rest of identifier
+                while (++pos < text.length()
+                        && Character.isJavaIdentifierPart(text.charAt(pos)));
+                String word = text.substring(start, pos);
+                // could use TokenStream#isKeyword() if it was public
+                if (!KEYWORDS.contains(word)) {
+                    continue;
+                }
+                style = KEYWORD;
+
+            // block comment (or javadoc)
+            } else if (text.regionMatches(pos, "/*", 0, 2)) {
+                style = COMMENT;
+                if (pos < text.length() - 3 && text.charAt(pos + 2) == '*'
+                        && text.charAt(pos + 3) != '/') {
+                    style = JAVADOC; // '/**' but not '/**/'
+                }
+                // move to end of '*/' or end of string if comment not closed
+                pos = text.indexOf("*/", pos);
+                pos = pos == -1 ? text.length() : pos + 2;
+
+            // line comment
+            } else if (text.regionMatches(pos, "//", 0, 2)) {
+                style = COMMENT;
+                // move to end of line or end of doc
+                while (++pos < text.length() && text.charAt(pos) != '\r'
+                    && text.charAt(pos) != '\n');
+
+            // literal strings or regexp
+            } else if (c == '\"' || c == '\'' || c == '/') {
+                style = QUOTED;
+                int stop = c; // stop when we get same char that started this
+                pos++; // skip first quote
+                while (pos < text.length()
+                        && (c = text.charAt(pos++)) != stop) {
+                    if (c == '\\') pos++; // skip any escaped chars
+                }
+                // allow flags 'gimy' in regexp
+                while (stop == '/' && text.length() > pos
+                        && "gimy".indexOf(text.charAt(pos)) != -1) {
+                    pos++;
+                }
+            } else {
+                pos++;
+                continue;
+            }
+
+            // apply style
+            doc.setCharacterAttributes(start, pos - start, style, false);
+        }
     }
 
     /**
@@ -3209,13 +3400,13 @@ class Menubar extends JMenuBar implements ActionListener {
     /**
      * Items that are enabled only when interrupted.
      */
-    private List<JMenuItem> interruptOnlyItems = 
+    private List<JMenuItem> interruptOnlyItems =
         Collections.synchronizedList(new ArrayList<JMenuItem>());
 
     /**
      * Items that are enabled only when running.
      */
-    private List<JMenuItem> runOnlyItems = 
+    private List<JMenuItem> runOnlyItems =
         Collections.synchronizedList(new ArrayList<JMenuItem>());
 
     /**
