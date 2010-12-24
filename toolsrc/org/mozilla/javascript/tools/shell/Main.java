@@ -48,14 +48,17 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Member;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextAction;
 import org.mozilla.javascript.EvaluatorException;
 import org.mozilla.javascript.Function;
+import org.mozilla.javascript.FunctionObject;
 import org.mozilla.javascript.GeneratedClassLoader;
 import org.mozilla.javascript.Kit;
 import org.mozilla.javascript.NativeArray;
@@ -379,7 +382,7 @@ public class Main
             BufferedReader in;
             try
             {
-                in = new BufferedReader(new InputStreamReader(global.getIn(), 
+                in = new BufferedReader(new InputStreamReader(global.getIn(),
                         charEnc));
             }
             catch(UnsupportedEncodingException e)
@@ -418,7 +421,7 @@ public class Main
                 Script script = loadScriptFromSource(cx, source, "<stdin>",
                                                      lineno, null);
                 if (script != null) {
-                    Object result = evaluateScript(script, cx, global);
+                    Object result = evaluateScript(script, cx, global, source);
                     // Avoid printing out undefined or function definitions.
                     if (result != Context.getUndefinedValue() &&
                         !(result instanceof Function &&
@@ -556,9 +559,28 @@ public class Main
     public static Object evaluateScript(Script script, Context cx,
                                         Scriptable scope)
     {
+        return evaluateScript(script, cx, scope, null);
+    }
+
+    public static Object evaluateScript(Script script, Context cx,
+                                        Scriptable scope, String source)
+    {
+
         try {
-            return script.exec(cx, scope);
+            Object result = script.exec(cx, scope);
+            if (result instanceof FunctionObject) {
+                Member m = ((FunctionObject) result).getMethodOrConstructor();
+                if (m.getName().equals("quit")
+                        && m.getDeclaringClass().equals(Global.class)) {
+                    System.exit(0);
+                }
+            }
+            return result;
         } catch (RhinoException rex) {
+            source = source != null ? source.trim() : "";
+            if (Arrays.asList("q", "quit", "exit").contains(source)) {
+                System.exit(0);
+            }
             ToolErrorReporter.reportException(
                 cx.getErrorReporter(), rex);
             exitCode = EXITCODE_RUNTIME_ERROR;
@@ -605,7 +627,7 @@ public class Main
     private static Object readFileOrUrl(String path, boolean convertToString)
     {
         try {
-            return SourceReader.readFileOrUrl(path, convertToString, 
+            return SourceReader.readFileOrUrl(path, convertToString,
                     shellContextFactory.getCharacterEncoding());
         } catch (IOException ex) {
             Context.reportError(ToolErrorReporter.getMessage(

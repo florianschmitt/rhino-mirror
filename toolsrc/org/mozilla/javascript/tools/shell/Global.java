@@ -46,7 +46,10 @@ package org.mozilla.javascript.tools.shell;
 import java.io.*;
 import java.net.*;
 import java.lang.reflect.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.Matcher;
@@ -120,6 +123,7 @@ public class Global extends ImporterTopLevel
         String[] names = {
             "defineClass",
             "deserialize",
+            "dir",
             "doctest",
             "gc",
             "help",
@@ -350,7 +354,7 @@ public class Global extends ImporterTopLevel
         in.close();
         return Context.toObject(deserialized, scope);
     }
-    
+
     public String[] getPrompts(Context cx) {
         if (ScriptableObject.hasProperty(this, "prompts")) {
             Object promptsJS = ScriptableObject.getProperty(this,
@@ -377,7 +381,7 @@ public class Global extends ImporterTopLevel
         }
         return prompts;
     }
-    
+
     /**
      * Example: doctest("js> function f() {\n  >   return 3;\n  > }\njs> f();\n3\n"); returns 2
      * (since 2 tests were executed).
@@ -392,7 +396,7 @@ public class Global extends ImporterTopLevel
         Global global = getInstance(funObj);
         return new Integer(global.runDoctest(cx, global, session, null, 0));
     }
-    
+
     public int runDoctest(Context cx, Scriptable scope, String session,
                           String sourceName, int lineNumber)
     {
@@ -462,17 +466,17 @@ public class Global extends ImporterTopLevel
     	}
     	return testCount;
     }
-    
+
     /**
      * Compare actual result of doctest to expected, modulo some
      * acceptable differences. Currently just trims the strings
      * before comparing, but should ignore differences in line numbers
      * for error messages for example.
-     * 
+     *
      * @param expected the expected string
      * @param actual the actual string
      * @return true iff actual matches expected modulo some acceptable
-     *      differences 
+     *      differences
      */
     private boolean doctestOutputMatches(String expected, String actual) {
         expected = expected.trim();
@@ -516,7 +520,7 @@ public class Global extends ImporterTopLevel
                 return true;
         }
     }
-    
+
     /**
      * The spawn function runs a given function or script in a different
      * thread.
@@ -827,6 +831,35 @@ public class Global extends ImporterTopLevel
         if (arg instanceof Integer)
             return arg;
         return ScriptRuntime.wrapInt(ScriptRuntime.toInt32(arg));
+    }
+
+    /**
+     * Similar to python dir() function.
+     * @return list of properties of ob prototype chain
+     */
+    public static Scriptable dir(Context cx, Scriptable thisObj,
+            Object[] args, Function funObj)
+    {
+        if (args.length == 0 || !(args[0] instanceof Scriptable)) {
+            return cx.newArray(thisObj, 0);
+        }
+        List result = new ArrayList();
+        Scriptable s = (Scriptable) args[0];
+        while (true) {
+            Object[] ids = s instanceof ScriptableObject
+                ? ((ScriptableObject)s).getAllIds() : s.getIds();
+            Arrays.sort(ids);
+            for (Object id : ids) {
+                result.add(id);
+            }
+            s = s.getPrototype();
+            if (s == null) {
+                break;
+            } else {
+                result.add("->");
+            }
+        }
+        return cx.newArray(thisObj, result.toArray());
     }
 
     public InputStream getIn() {
