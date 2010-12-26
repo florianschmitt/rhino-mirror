@@ -1701,7 +1701,7 @@ ilen = dnaInput.length;
 dnaInput = dnaInput.replace(/>.*\n|\n/g,"")
 clen = dnaInput.length
 
-var dnaOutputString;
+var dnaOutputString = "";
 
 for(i in seqs)
     dnaOutputString += seqs[i].source + " " + (dnaInput.match(seqs[i]) || []).length + "\n";
@@ -1710,3 +1710,8 @@ for(i in seqs)
 for(k in subs)
  dnaInput = dnaInput.replace(k, subs[k]) // FIXME: Would like this to be a global substitution in a future version of SunSpider.
  // search string, replacement string, flags
+
+//print(dnaOutputString)
+//print(ilen);
+//print(clen);
+//print(dnaInput.length);

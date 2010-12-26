@@ -12,7 +12,8 @@ var tests = [
 var repeatCount = 10;
 
 var results = { times: [], categories: {}};
-for each (var test in tests) {
+for (var i = 0; i < tests.length; i++) {
+    var test = tests[i];
     var dash = test.indexOf('-');
     var category = test.substring(0, dash);
     var testName = test.substring(dash + 1);
@@ -22,12 +23,14 @@ for each (var test in tests) {
 
 for (var currentRepeat = -1; currentRepeat < repeatCount; currentRepeat++) {
     var totalTime = 0;
-    for each (var category in results.categories) {
-        if (!category.times) continue;
+    for (var p in results.categories) {
+        if (!results.categories.hasOwnProperty(p)) continue;
+        var category = results.categories[p];
         var categoryTime = 0;
-        for each (var test in category.tests) {
-            if (!test.times) continue;
-            print('iteration ' + lpad(currentRepeat, 2) + ' : loading ' + category.name + '-' + test.name + '.js')
+        for (var q in category.tests) {
+            if (!category.tests.hasOwnProperty(q)) continue;
+            var test = category.tests[q];
+            print('iteration ' + lpad('' + currentRepeat, 2) + ' : loading ' + category.name + '-' + test.name + '.js')
             var start = new Date();
             load(category.name + "-" + test.name + ".js");
             var time = new Date() - start;
@@ -65,11 +68,13 @@ print("--------------------------------------------");
 print(rpad("Total:", 22) + timeDisplay(results.times));
 print("--------------------------------------------");
 
-for each (var category in results.categories) {
-    if (!category.times) continue;
-    print(rpad("  " + category.name + ":", 20) + timeDisplay(category.times));
-    for each (var test in category.tests) {
-        if (!test.times) continue;
-        print(rpad("    " + test.name + ":", 20) + timeDisplay(test.times));
+for (var p in results.categories) {
+    if (!results.categories.hasOwnProperty(p)) continue;
+    var category = results.categories[p];
+    print(rpad("  " + category.name + ":", 22) + timeDisplay(category.times));
+    for (var q in category.tests) {
+        if (!category.tests.hasOwnProperty(q)) continue;
+        var test = category.tests[q];
+        print(rpad("    " + test.name + ":", 22) + timeDisplay(test.times));
     }
 }
