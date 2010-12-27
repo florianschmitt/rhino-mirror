@@ -848,6 +848,9 @@ public class Global extends ImporterTopLevel
         while (true) {
             Object[] ids = s instanceof ScriptableObject
                 ? ((ScriptableObject)s).getAllIds() : s.getIds();
+            for (int i = 0; i < ids.length; i++) {
+                ids[i] = ids[i].toString();
+            }
             Arrays.sort(ids);
             for (Object id : ids) {
                 result.add(id);
