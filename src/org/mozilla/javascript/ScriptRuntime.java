@@ -164,7 +164,7 @@ public class ScriptRuntime {
         Scriptable.class;
 
     private static final String[] lazilyNames = {
-        "RegExp",        "org.mozilla.javascript.regexp.NativeRegExp",
+        "RegExp",        "org.mozilla.javascript.regexp.JreNativeRegExp",
         "Packages",      "org.mozilla.javascript.NativeJavaTopPackage",
         "java",          "org.mozilla.javascript.NativeJavaTopPackage",
         "javax",         "org.mozilla.javascript.NativeJavaTopPackage",

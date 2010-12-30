@@ -1,0 +1,29 @@
+js> load('testsrc/doctests/util.js');
+
+js> String.prototype.search
+function search() { [native code for String.search, arity=1] }
+
+js> 'abc'.search()
+0
+js> 'abc'.search('a')
+0
+js> 'abc'.search('b')
+1
+js> 'abc'.search('c')
+2
+js> 'abc'.search('d')
+-1
+js> 'abc'.search('.')
+0
+js> 'abc'.search('[abc]')
+0
+js> 'abc'.search('[bc]')
+1
+js> 'abc'.search('(.)')
+0
+js> 'abc'.search(/b/)
+1
+js> 'abc'.search(/a.c/)
+0
+js> 'abc'.search(/a.cd/)
+-1

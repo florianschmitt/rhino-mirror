@@ -1,0 +1,63 @@
+js> load('testsrc/doctests/util.js');
+
+js> String.prototype.split
+function split() { [native code for String.split, arity=2] }
+
+js> ''.split(/.?/).length
+0
+js> ''.split(/./).length
+1
+js> 'a,b,c,'.split(',')
+a,b,c,
+js> 'a,b,c'.split(',')
+a,b,c
+js> 'a,b,c,'.split(',')
+a,b,c,
+js> ',a,b,c,'.split(',')
+,a,b,c,
+js> 'abc'.split()
+abc
+js> 'abc'.split('x')
+abc
+js> 'a,b,c'.split(',', 1)
+a
+js> 'a,b,c'.split(',', 2)
+a,b
+js> 'a,b,c'.split(',', 3)
+a,b,c
+js> 'a,b,c'.split(',', 4)
+a,b,c
+js> 'a,b,c'.split(',', -1)
+a,b,c
+js> 'a,b,c'.split(',', 0)
+
+js> 'a,b,c'.split(',', 0).length
+0
+js> 'xabyabzab'.split('(.)a')
+xabyabzab
+js> 'xabyabzab'.split(/(.)a/)
+,x,b,y,b,z,b
+js> 'xabyabzab'.split(/./)
+,,,,,,,,,
+js> 'xabyabzab'.split(/(.)/)
+,x,,a,,b,,y,,a,,b,,z,,a,,b,
+js> 'xabyabzab'.split(/(.)(.)/)
+,x,a,,b,y,,a,b,,z,a,b
+js> 'xabyabzab'.split(/[^]/)
+,,,,,,,,,
+js> 'xabyabzab'.split(/\S/)
+,,,,,,,,,
+js> 'xabyabzab'.split(/a/)
+x,by,bz,b
+js> 'xabyabzab'.split(/(a)/)
+x,a,by,a,bz,a,b
+js> 'ab'.split(/a*?/)
+a,b
+js> 'ab'.split(/a*/)
+,b
+js> "A<B>bold</B>and<CODE>coded</CODE>".split(/<(\/)?([^<>]+)>/)
+A,,B,bold,/,B,and,,CODE,coded,/,CODE,
+js> ''.split(/.?/).length
+0
+js> ''.split(/./).length
+1

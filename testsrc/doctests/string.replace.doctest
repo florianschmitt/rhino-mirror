@@ -1,0 +1,49 @@
+js> load('testsrc/doctests/util.js');
+
+js> String.prototype.replace;
+function replace() { [native code for String.replace, arity=1] }
+
+js> 'abc'.replace()
+undefinedabc
+js> String.prototype.replace.call()
+undefined[object global]
+js> String.prototype.replace.call(null, 'a', 'b')
+[object globbl]
+js> 'xabyabzab'.replace('ab', 'c')
+xcyabzab
+js> 'xabyabzab'.replace('ab', 'c')
+xcyabzab
+js> 'xabyabzab'.replace('ab', 'c', 'g')
+xcyczc
+js> 'xabyabzab'.replace('AB', 'c', 'g')
+xabyabzab
+js> 'xabyabzab'.replace('AB', 'c', 'gi')
+xcyczc
+js> 'xabyabzab'.replace('ab', '$$')
+x$yabzab
+js> 'xabyabzab'.replace('ab', "$$$'$&$`$")
+x$yabzababx$yabzab
+js> 'xabyabzab'.replace('ab', "$$$'$&$`$", 'g')
+x$yabzababx$y$zababxaby$z$abxabyabz$
+js> 'xabyabzab'.replace('.ab', 'c')
+xabyabzab
+js> 'xabyabzab'.replace(/ab/, 'c')
+xcyabzab
+js> 'xabyabzab'.replace(/ab/, 'c', 'g')
+xcyabzab
+js> 'xabyabzab'.replace(/ab/g, 'c')
+xcyczc
+js> 'xabyabzab'.replace(/(.)ab/, '$0')
+$0yabzab
+js> 'xabyabzab'.replace(/(.)ab/, '$1')
+xyabzab
+js> 'xabyabzab'.replace(/(.)ab/, '$2')
+$2yabzab
+js> 'xabyabzab'.replace(/(.)ab/, '$01')
+xyabzab
+js> 'xabyabzab'.replace(/(.)ab/, '$001')
+$001yabzab
+js> 'xabyabzab'.replace(/(.)ab/, '$11')
+x1yabzab
+js> "$1,$2".replace(/(\$(\d))/g, "$$1-$1$2")
+$1-$11,$1-$22

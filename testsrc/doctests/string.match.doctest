@@ -1,0 +1,7 @@
+js> load('testsrc/doctests/util.js');
+
+js> String.prototype.match
+function match() { [native code for String.match, arity=1] }
+
+
+
