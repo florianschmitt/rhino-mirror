@@ -186,7 +186,7 @@ public class ScriptRuntime {
 
     // Locale object used to request locale-neutral operations.
     public static Locale ROOT_LOCALE = new Locale("");
- 
+
     private static final Object LIBRARY_SCOPE_KEY = "LIBRARY_SCOPE";
 
     public static boolean isRhinoRuntimeType(Class<?> cl)
@@ -230,9 +230,9 @@ public class ScriptRuntime {
         NativeArray.init(scope, sealed);
         if (cx.getOptimizationLevel() > 0) {
             // When optimizing, attempt to fulfill all requests for new Array(N)
-            // with a higher threshold before switching to a sparse 
+            // with a higher threshold before switching to a sparse
             // representation
-            NativeArray.setMaximumInitialCapacity(200000);            
+            NativeArray.setMaximumInitialCapacity(200000);
         }
         NativeString.init(scope, sealed);
         NativeBoolean.init(scope, sealed);
@@ -244,10 +244,10 @@ public class ScriptRuntime {
         NativeWith.init(scope, sealed);
         NativeCall.init(scope, sealed);
         NativeScript.init(scope, sealed);
-        
+
         NativeIterator.init(scope, sealed); // Also initializes NativeGenerator
 
-        boolean withXml = cx.hasFeature(Context.FEATURE_E4X) && 
+        boolean withXml = cx.hasFeature(Context.FEATURE_E4X) &&
                           cx.getE4xImplementationFactory() != null;
 
         for (int i = 0; i != lazilyNames.length; i += 2) {
@@ -1488,7 +1488,7 @@ public class ScriptRuntime {
         }
         return getObjectProp(sobj, property, cx);
     }
-    
+
     public static Object getObjectProp(Scriptable obj, String property,
                                        Context cx)
     {
@@ -1511,7 +1511,7 @@ public class ScriptRuntime {
 
         return result;
     }
-    
+
     public static Object getObjectPropNoWarn(Object obj, String property,
                                              Context cx)
     {
@@ -1529,7 +1529,7 @@ public class ScriptRuntime {
         }
         return result;
     }
-    
+
     /*
      * A cheaper and less general version of the above for well-known argument
      * types.
@@ -1948,7 +1948,7 @@ public class ScriptRuntime {
             bound.put(id, bound, value);
         }
         return value;
-    }    
+    }
 
     public static Object strictSetName(Scriptable bound, Object value,
             Context cx, Scriptable scope, String id) {
@@ -1975,7 +1975,7 @@ public class ScriptRuntime {
                     linep[0]);
         }
         return value;
-    }    
+    }
 
     public static Object setConst(Scriptable bound, Object value,
                                  Context cx, String id)
@@ -2012,22 +2012,22 @@ public class ScriptRuntime {
         int index;
         ObjToIntMap used;
         Object currentId;
-        int enumType; /* one of ENUM_INIT_KEYS, ENUM_INIT_VALUES, 
+        int enumType; /* one of ENUM_INIT_KEYS, ENUM_INIT_VALUES,
                          ENUM_INIT_ARRAY */
-        
+
         // if true, integer ids will be returned as numbers rather than strings
-        boolean enumNumbers; 
-        
+        boolean enumNumbers;
+
         Scriptable iterator;
     }
-    
-    public static Scriptable toIterator(Context cx, Scriptable scope, 
+
+    public static Scriptable toIterator(Context cx, Scriptable scope,
                                         Scriptable obj, boolean keyOnly)
     {
-        if (ScriptableObject.hasProperty(obj, 
+        if (ScriptableObject.hasProperty(obj,
             NativeIterator.ITERATOR_PROPERTY_NAME))
         {
-            Object v = ScriptableObject.getProperty(obj, 
+            Object v = ScriptableObject.getProperty(obj,
                 NativeIterator.ITERATOR_PROPERTY_NAME);
             if (!(v instanceof Callable)) {
                throw typeError0("msg.invalid.iterator");
@@ -2081,10 +2081,10 @@ public class ScriptRuntime {
             // or "for (a.i in a)" would wrongly enumerate i in a as well
             enumChangeObject(x);
         }
-        
+
         return x;
     }
-    
+
     public static void setEnumNumbers(Object enumObj, boolean enumNumbers) {
         ((IdEnumeration)enumObj).enumNumbers = enumNumbers;
     }
@@ -2099,7 +2099,7 @@ public class ScriptRuntime {
             Callable f = (Callable) v;
             Context cx = Context.getContext();
             try {
-                x.currentId = f.call(cx, x.iterator.getParentScope(), 
+                x.currentId = f.call(cx, x.iterator.getParentScope(),
                                      x.iterator, emptyArgs);
                 return Boolean.TRUE;
             } catch (JavaScriptException e) {
@@ -2309,7 +2309,7 @@ public class ScriptRuntime {
         Scriptable thisObj = toObjectOrNull(cx, obj, scope);
         return getPropFunctionAndThisHelper(obj, property, cx, thisObj);
     }
-    
+
     private static Callable getPropFunctionAndThisHelper(Object obj,
           String property, Context cx, Scriptable thisObj)
     {
@@ -2489,7 +2489,7 @@ public class ScriptRuntime {
         Object[] callArgs;
         if (isApply) {
             // Follow Ecma 15.3.4.3
-            callArgs = L <= 1 ? ScriptRuntime.emptyArgs : 
+            callArgs = L <= 1 ? ScriptRuntime.emptyArgs :
                 getApplyArguments(cx, args[1]);
         } else {
             // Follow Ecma 15.3.4.4
@@ -2570,7 +2570,7 @@ public class ScriptRuntime {
         Evaluator evaluator = Context.createInterpreter();
         if (evaluator == null) {
             throw new JavaScriptException("Interpreter not present",
-                    filename, lineNumber);            
+                    filename, lineNumber);
         }
 
         // Compile with explicit interpreter instance to force interpreter
@@ -2818,7 +2818,7 @@ public class ScriptRuntime {
     public static Object toPrimitive(Object val) {
         return toPrimitive(val, null);
     }
-    
+
     public static Object toPrimitive(Object val, Class<?> typeHint)
     {
         if (!(val instanceof Scriptable)) {
@@ -2914,9 +2914,9 @@ public class ScriptRuntime {
             return x == y;
         }
     }
-    
+
     public static boolean isPrimitive(Object obj) {
-        return obj == null || obj == Undefined.instance || 
+        return obj == null || obj == Undefined.instance ||
                 (obj instanceof Number) || (obj instanceof String) ||
                 (obj instanceof Boolean);
     }
@@ -3120,13 +3120,13 @@ public class ScriptRuntime {
                 Constructor<?> globalClassCtor = globalClass.getConstructor(parm);
                 Object[] arg = { cx };
                 return (ScriptableObject) globalClassCtor.newInstance(arg);
-            } 
+            }
             catch (RuntimeException e) {
                 throw e;
-            } 
+            }
             catch (Exception e) {
                 // fall through...
-            } 
+            }
         }
         return new ImporterTopLevel(cx);
     }
@@ -3197,11 +3197,11 @@ public class ScriptRuntime {
             }
         }
     }
-    
+
     public static void addInstructionCount(Context cx, int instructionsToAdd)
     {
     	cx.instructionCount += instructionsToAdd;
-        if (cx.instructionCount > cx.instructionThreshold) 
+        if (cx.instructionCount > cx.instructionThreshold)
         {
             cx.observeInstructionCount(cx.instructionCount);
             cx.instructionCount = 0;
@@ -3375,7 +3375,7 @@ public class ScriptRuntime {
                 Object wrap = cx.getWrapFactory().wrap(cx, scope, re, null);
                 ScriptableObject.defineProperty(
                         errorObject, "rhinoException", wrap,
-                        ScriptableObject.PERMANENT | ScriptableObject.READONLY);                
+                        ScriptableObject.PERMANENT | ScriptableObject.READONLY);
             }
             obj = errorObject;
         }
@@ -3384,7 +3384,7 @@ public class ScriptRuntime {
         // See ECMA 12.4
         catchScopeObject.defineProperty(
             exceptionName, obj, ScriptableObject.PERMANENT);
-        
+
         if (isVisible(cx, t)) {
             // Add special Rhino object __exception__ defined in the catch
             // scope that can be used to retrieve the Java exception associated
@@ -3399,7 +3399,7 @@ public class ScriptRuntime {
         }
         return catchScopeObject;
     }
-    
+
     private static boolean isVisible(Context cx, Object obj) {
         ClassShutter shutter = cx.getClassShutter();
         return shutter == null ||
@@ -3531,7 +3531,7 @@ public class ScriptRuntime {
             setObjectProtoAndParent(array, scope);
             return array;
         }
-        
+
         NativeArray array = new NativeArray(length);
         setObjectProtoAndParent(array, scope);
 
@@ -3595,7 +3595,7 @@ public class ScriptRuntime {
                     outArgs[0] = id;
                     outArgs[1] = value;
                     fun.call(cx, scope, object, outArgs);
-                }              
+                }
             } else {
                 int index = ((Integer)id).intValue();
                 ScriptableObject.putProperty(object, index, value);
@@ -3673,15 +3673,15 @@ public class ScriptRuntime {
         Object[] arguments = {arg1, arg2, arg3, arg4};
         return getMessage(messageId, arguments);
     }
-    
+
     /**
      * This is an interface defining a message provider. Create your
      * own implementation to override the default error message provider.
-     * 
+     *
      * @author Mike Harm
      */
     public interface MessageProvider {
-     
+
         /**
          * Returns a textual message identified by the given messageId,
          * parameterized by the given arguments.
@@ -3738,7 +3738,7 @@ public class ScriptRuntime {
         String filename = Context.getSourcePositionFromStack(linep);
         return constructError(error, message, filename, linep[0], null, 0);
     }
-    
+
     public static EcmaError constructError(String error,
                                            String message,
                                            int lineNumberDelta)
@@ -4034,22 +4034,22 @@ public class ScriptRuntime {
     }
 
     /**
-     * Equivalent to executing "new Error(message)" from JavaScript. 
+     * Equivalent to executing "new Error(message)" from JavaScript.
      * @param cx the current context
      * @param scope the current scope
      * @param message the message
      * @return a JavaScriptException you should throw
      */
-    public static JavaScriptException throwError(Context cx, Scriptable scope, 
+    public static JavaScriptException throwError(Context cx, Scriptable scope,
             String message) {
-        final Scriptable error = cx.newObject(scope, "Error", 
+        final Scriptable error = cx.newObject(scope, "Error",
                 new Object[] { message });
-        return new JavaScriptException(error, 
+        return new JavaScriptException(error,
                 ScriptableObject.getTypedProperty(error, "fileName", String.class),
                 ScriptableObject.getTypedProperty(error, "lineNumber", Number.class).intValue());
     }
 
     public static final Object[] emptyArgs = new Object[0];
     public static final String[] emptyStrings = new String[0];
-    
+
 }
