@@ -42,7 +42,6 @@
 package org.mozilla.javascript.regexp;
 
 import java.io.Serializable;
-import java.util.regex.Pattern;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
@@ -2618,8 +2617,6 @@ class RECompiled implements Serializable
 {
     static final long serialVersionUID = -6144956577595844213L;
 
-    Pattern pattern;
-    boolean globalFlag = false;
     char []source;          /* locked source string, sans // */
     int parenCount;         /* number of parenthesized submatches */
     int flags;              /* flags  */
