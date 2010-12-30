@@ -1703,14 +1703,17 @@ clen = dnaInput.length
 
 var dnaOutputString = "";
 
-for(i in seqs)
+for(i in seqs) {
+    if (!seqs.hasOwnProperty(i)) continue
     dnaOutputString += seqs[i].source + " " + (dnaInput.match(seqs[i]) || []).length + "\n";
+}
  // match returns null if no matches, so replace with empty
 
-for(k in subs)
- dnaInput = dnaInput.replace(k, subs[k]) // FIXME: Would like this to be a global substitution in a future version of SunSpider.
- // search string, replacement string, flags
-
+for(k in subs) {
+    if (!subs.hasOwnProperty(k)) continue
+    dnaInput = dnaInput.replace(k, subs[k]) // FIXME: Would like this to be a global substitution in a future version of SunSpider.
+    // search string, replacement string, flags
+}
 //print(dnaOutputString)
 //print(ilen);
 //print(clen);
