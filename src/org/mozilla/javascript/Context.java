@@ -2533,7 +2533,7 @@ public class Context
     {
         if (regExpProxy == null) {
             Class<?> cl = Kit.classOrNull(
-                          "org.mozilla.javascript.regexp.JreRegExpImpl");
+                          "org.mozilla.javascript.regexp.RegExpImpl");
             if (cl != null) {
                 regExpProxy = (RegExpProxy)Kit.newInstanceOrNull(cl);
             }

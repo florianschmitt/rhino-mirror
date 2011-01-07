@@ -1,7 +1,9 @@
 package org.mozilla.javascript.tests;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.*;
@@ -50,13 +52,17 @@ public class DoctestsTest {
     }
 
     public static String loadFile(File f) throws IOException {
-        int length = (int) f.length(); // don't worry about very long files
-        char[] buf = new char[length];
-        new FileReader(f).read(buf, 0, length);
-        return new String(buf);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buf = new byte[4096];
+        FileInputStream fis = new FileInputStream(f);
+        for (int len = 0; (len = fis.read(buf)) != -1;) {
+            baos.write(buf, 0, len);
+        }
+        fis.close();
+        return baos.toString("UTF-8");
     }
 
-    @Parameters
+//    @Parameters
     public static Collection<Object[]> doctestValues() throws IOException {
         File[] doctests = getDoctestFiles();
         List<Object[]> result = new ArrayList<Object[]>();
@@ -70,9 +76,10 @@ public class DoctestsTest {
     }
 
     // move "@Parameters" to this method to test a single doctest
+    @Parameters
     public static Collection<Object[]> singleDoctest() throws IOException {
         List<Object[]> result = new ArrayList<Object[]>();
-        File f = new File(baseDirectory, "Counter.doctest");
+        File f = new File(baseDirectory, "regexp.doctest");
         String contents = loadFile(f);
         result.add(new Object[] { f.getName(), contents, -1 });
         return result;

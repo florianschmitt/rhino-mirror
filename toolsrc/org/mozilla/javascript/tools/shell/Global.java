@@ -438,25 +438,34 @@ public class Global extends ImporterTopLevel
     		    testCount++;
 	    		Object result = cx.evaluateString(scope, inputString,
 	    				            "doctest input", 1, null);
+	    		// put result of any 'print()' calls in result
+	    		resultString = out.toString();
 	            if (result != Context.getUndefinedValue() &&
 	                    !(result instanceof Function &&
 	                      inputString.trim().startsWith("function")))
 	            {
-	            	resultString = Context.toString(result);
+	            	resultString += Context.toString(result);
 	            }
     		} catch (RhinoException e) {
-                ToolErrorReporter.reportException(cx.getErrorReporter(), e);
+    		    ToolErrorReporter.reportException(cx.getErrorReporter(), e);
     		} finally {
     		    this.setOut(savedOut);
     		    this.setErr(savedErr);
         		cx.setErrorReporter(savedErrorReporter);
-    			resultString += err.toString() + out.toString();
+    			resultString += err.toString();
     		}
     		if (!doctestOutputMatches(expectedString, resultString)) {
+    		    int diff = 0;
+    		    while (diff < expectedString.length()
+    		            && diff < resultString.length()
+    		            && expectedString.charAt(diff)
+    		                == resultString.charAt(diff++));
+
     		    String message = "doctest failure running:\n" +
                     inputString +
-                    "expected: " + expectedString +
-                    "actual: " + resultString + "\n";
+                    "expected:\n" + expectedString +
+                    "actual:\n" + resultString +
+                    "\ndifferent at pos: " + diff + "\n";
     		    if (sourceName != null)
                     throw Context.reportRuntimeError(message, sourceName,
                             lineNumber+i-1, null, 0);

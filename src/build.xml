@@ -65,7 +65,11 @@ Requires Ant version 1.2
            debug="${debug}"
            includeAntRuntime="false"
            target="${target-jvm}"
-           source="${source-level}" />
+           source="${source-level}">
+      <classpath>
+        <fileset dir="lib" />
+      </classpath>
+    </javac>
     <copy todir="${classes}">
       <fileset dir="src" includes="org/**/*.properties" />
       <filterset>
