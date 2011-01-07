@@ -1,0 +1,498 @@
+js> // ***** function definitions *****
+js> RegExp.prototype.exec
+function exec() { [native code for RegExp.exec, arity=1] }
+js> RegExp.prototype.test
+function test() { [native code for RegExp.test, arity=1] }
+
+
+
+js> // ***** Tests from ECMA spec *****
+js> "$1,$2".replace(/(\$(\d))/g, "$$1-$1$2")
+$1-$11,$1-$22
+js> "ab".split(/a*?/)
+a,b
+js> "ab".split(/a*/)
+,b
+js> "A<B>bold</B>and<CODE>coded</CODE>".split(/<(\/)?([^<>]+)>/)
+A,,B,bold,/,B,and,,CODE,coded,/,CODE,
+js> /a|ab/.exec("abc")
+a
+js> /a[a-z]{2,4}/.exec("abcdefghi")
+abcde
+js> /a[a-z]{2,4}?/.exec("abcdefghi")
+abc
+js> /(aa|aabaac|ba|b|c)*/.exec("aabaac")
+aaba,ba
+js> "aaaaaaaaaa,aaaaaaaaaaaaaaa".replace(/^(a+)\1*,\1+$/,"$1")
+aaaaa
+js> // /(z)((a+)?(b+)?(c))*/.exec("zaacbbbcac") :zaacbbbcac,z,ac,a,,c
+js> /(a*)*/.exec("b")
+,
+js> /(a*)b\1+/.exec("baaaac")
+b,
+js> /(?=(a+))/.exec("baaabac")
+,aaa
+js> /(?=(a+))a*b\1/.exec("baaabac")
+aba,a
+js> //js> /(.*?)a(?!(a+)b\2c)\2(.*)/.exec("baaabaac") 
+js> //baaabaac,ba,,abaac
+
+
+
+js> //  ***** Test empty / null / undefined input ***** 
+js> /abc/.exec()
+js: "doctest input", line 1: uncaught JavaScript runtime exception: SyntaxError: no input for /abc/
+	at doctest input:1
+js> JSON.stringify(/abc/.exec(null))
+null
+js> JSON.stringify(/null/.exec(null))
+["null"]
+js> /abc/.exec(undefined)
+null
+js> /undefined/.exec(undefined)
+undefined
+js> /abc/.test()
+js: "doctest input", line 1: uncaught JavaScript runtime exception: SyntaxError: no input for /abc/
+	at doctest input:1
+js> /abc/.test(null)
+false
+js> /null/.test(null)
+true
+js> /n/.test(undefined)
+true
+js> 'abc'.split(null)
+abc
+js> 'string with null and undefined words'.split()
+string with null and undefined words
+js> 'string with null and undefined words'.split(null)
+string with , and undefined words
+js> 'string with null and undefined words'.split(undefined)
+string with null and , words
+js> 'abc'.replace('a')
+undefinedbc
+js> 'abc'.replace('a', null)
+nullbc
+js> String.prototype.replace.call(null, 'l', 'x')
+[object gxobal]
+js> 'string with null and undefined words'.search()
+0
+js> 'string with null and undefined words'.search(null)
+12
+js> 'string with null and undefined words'.search(undefined)
+21
+
+
+
+
+js> // ***** JS regexp expressions (different to java) *****
+js> 'abc\x00xyz'.search(/\0/)
+3
+js> '\xa0'.search(/\xa0/)
+0
+js> '\xa0'.search(/\u00a0/)
+0
+js> 'abc\x0bxyz'.search(/\v/)
+3
+js> 'abc\x08xyz'.search(/\b/)
+0
+js> 'abc\x08xyz'.search(/[\b]/)
+3
+js> // ***** add some unicode chars ***** 
+js> 'ï'.charCodeAt(0)
+239
+js> 'naeïve'.search(/\u00ef/)
+3
+js> 'n\u0101ïve\ufeff'.search(/\s/)
+5
+js> 'n\u0101ïve\ufeff'.search(/[\s]/)
+5
+js> '\ufeffn\u0101ïve'.search(/[^\s]/)
+1
+js> '\ufeffn\u0101ïve'.search(/\S/)
+1
+js> '\ufeffn\u0101ïve'.search(/[\S]/)
+1
+js> 'n\u0101ïve\ufeff'.search(/[^\S]/)
+5
+js> 'a\n'.search(/a./)
+-1
+js> 'a\n'.search(/a[^]/)
+0
+js> 'abc[xyz'.search(/[[]/)
+3
+
+
+js> // ***** global flag *****
+js> 'abac'.match(/a(.)/)
+ab,b
+js> 'abac'.match(/a(.)/g)
+ab,ac
+js> r = /ab/
+/ab/
+js> r.global
+false
+js> r.test('abac')
+true
+js> r.lastIndex
+0
+js> r.test('abac')
+true
+js> r.lastIndex
+0
+js> 'xabyabzab'.replace(r, 'x')
+xxyabzab
+js> r = /ab/g
+/ab/g
+js> r.global
+true
+js> r.test('abac')
+true
+js> r.lastIndex
+2
+js> r.test('abac')
+false
+js> r.lastIndex
+0
+js> 'xabyabzab'.replace(r, 'x')
+xxyxzx
+
+
+
+js> // ***** ignoreCase flag *****
+js> /(a)/.exec('abc')
+a,a
+js> /(a)/.exec('ABC')
+null
+js> /(a)/i.exec('abc')
+a,a
+js> /(a)/i.exec('ABC')
+A,A
+
+
+
+js> // ***** multiline flag *****
+js> /^a/.test('abc')
+true
+js> /^a/.test('xyz\nabc')
+false
+js> /^a/m.test('xyz\nabc')
+true
+js> /b$/.test('ab')
+true
+js> /b$/.test('ab\nxy')
+false
+js> /b$/.test('xy\nab')
+true
+js> /b$/m.test('ab\nxy')
+true
+js> /^a/.test('xyz\nabc')
+false
+js> RegExp.multiline = true
+true
+js> /^a/.test('xyz\nabc')
+true
+js> RegExp.multiline
+true
+js> RegExp.multiline = false
+false
+
+
+js> // ***** String.match *****
+js> a = 'a'.match('a(b)?')
+a,
+js> a[0]
+a
+js> typeof a[1]
+undefined
+
+js> // ***** String.search *****
+js> 'abc'.search('a')
+0
+js> 'abc'.search('a$')
+-1
+js> 'a$bc'.search('a$')
+-1
+js> 'abc'.search('A')
+-1
+js> 'abc'.search('A', 'i')
+0
+js> 'abc'.search(/A/i)
+0
+js> 'abc'.search(/A/)
+-1
+js> 'abc'.search('')
+0
+js> ''.search('')
+0
+
+
+
+js> // ***** String.split *****
+js> 'a,b,c,'.split(',')
+a,b,c,
+js> 'hi there bye'.split(' ')
+hi,there,bye
+js> '   hi there bye'.split(' ')
+,,,hi,there,bye
+js> '   hi there bye '.split(' ')
+,,,hi,there,bye,
+js> 'abc'.split('')
+a,b,c
+js> 'abc'.split(/[^]/)
+,,,
+js> 'abc'.split(/./)
+,,,
+js> 'abc'.split(/.*/)
+
+js> 'abc'.split(/.*/).length
+1
+js> 'abc'.split('x')
+abc
+js> 'a.b.c'.split('.')
+a,b,c
+js> 'a.b.c'.split(/./)
+,,,,,
+js> 'a,b,c,d'.split(',', 0)
+
+js> 'a,b,c,d'.split(',', 1)
+a
+js> 'a,b,c,d'.split(',', 2)
+a,b
+js> 'a,b,c,d'.split(',', 10)
+a,b,c,d
+js> 'a,b,c,d'.split(',', -1)
+a,b,c,d
+js> 'a,b,c,d'.split(',', '3')
+a,b,c
+js> 'aXb'.split('x', -1)
+aXb
+js> 'aXb'.split('x', -1, 'i')
+aXb
+
+
+
+js> // ***** String.replace *****
+js> 'abc'.replace(/a/, 'x')
+xbc
+js> 'abxabyabz'.replace(/a/, 'x')
+xbxabyabz
+js> 'abxabyabz'.replace(/a/g, 'x')
+xbxxbyxbz
+js> 'abxabyabz'.replace(/a/g, function(s) { return 'f' + s + 'f'; })
+fafbxfafbyfafbz
+js> 'abxabyabz'.replace(/A/g, function(s) { return 'f' + s + 'f'; })
+abxabyabz
+js> 'abxabyabz'.replace('A', function(s) { return 'f' + s + 'f'; }, 'i')
+fafbxabyabz
+js> 'abxabyabz'.replace('A', function(s) { return 'f' + s + 'f'; }, 'ig')
+fafbxfafbyfafbz
+js> 'abxabyabz'.replace(/ab(.)/g, "$1")
+xyz
+js> 'abxabyabz'.replace(/ab(.)/g, "$01")
+xyz
+js> 'abxabyabz'.replace(/ab(.)/g, "$0")
+$0$0$0
+js> 'abxabyabz'.replace(/ab(.)/g, "$001")
+$001$001$001
+js> 'abxabyabz'.replace(/ab(.)/g, "$$")
+$$$
+js> 'abxabyabz'.replace(/ab(.)/g, "$2")
+$2$2$2
+js> 'abxabyabz'.replace(/ab(.)/g, "$&")
+abxabyabz
+js> 'abxabyabz'.replace(/ab(.)/g, "$`")
+abxabxaby
+js> 'abxabyabz'.replace(/ab(.)/g, "$'")
+abyabzabz
+
+
+
+js> // ***** RegExp static properties *****
+js> /a(.)(c)/.test('left_abc_right')
+true
+js> RegExp.multiline
+false
+js> RegExp['$*']
+false
+js> RegExp.input
+left_abc_right
+js> RegExp['$_']
+left_abc_right
+js> RegExp.leftContext
+left_
+js> RegExp['$`']
+left_
+js> RegExp.rightContext
+_right
+js> RegExp["$'"]
+_right
+js> RegExp.lastMatch
+abc
+js> RegExp['$&']
+abc
+js> RegExp['$1']
+b
+js> RegExp['$2']
+c
+js> RegExp['$3']
+
+js> RegExp['$01']
+
+js> RegExp.lastParen
+c
+js> RegExp['$+']
+c
+js> /a/.test('a')
+true
+js> RegExp.input
+a
+js> /a/.test('b')
+false
+js> RegExp.input
+a
+js> 'abc'.replace('a', 'x')
+xbc
+js> RegExp.rightContext
+bc
+js> RegExp.input
+abc
+js> 'xyz'.replace('a', 'x')
+xyz
+js> RegExp.rightContext
+bc
+js> RegExp.input
+abc
+js> /a/.test('abc')
+true
+js> RegExp.input
+abc
+js> 'x,y,z'.split(',')
+x,y,z
+js> RegExp.input
+abc
+js> 'x,y,z'.split(/,/)
+x,y,z
+js> RegExp.input
+x,y,z
+js> RegExp.leftContext
+x,y
+js> /a/.test('abc')
+true
+js> RegExp.input
+abc
+js> 'xyz'.search('y')
+1
+js> RegExp.input
+xyz
+js> /a/.test('abc')
+true
+js> RegExp.input
+abc
+js> 'xyz'.replace('y', 'x')
+xxz
+js> RegExp.input
+xyz
+js> /a/.test('abc')
+true
+js> RegExp.input
+abc
+js> 'xyz'.replace('y', function(s) { print(RegExp.input); /f/.test('insidef'); print(RegExp.input); return 'x'});
+xyz
+insidef
+xxz
+js> RegExp.input
+xyz
+js> 'a'.match('a(b)?')
+a,
+js> RegExp['$1']
+
+js> typeof RegExp['$0']
+undefined
+js> typeof RegExp['$1']
+string
+js> typeof RegExp['$2']
+string
+js> typeof RegExp['$3']
+string
+js> typeof RegExp['$10']
+undefined
+
+
+
+js> // ***** JS1.2 quirks *****
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(120)
+js> r = / /g
+/ /g
+js> r.exec('hi there bye')
+[" "]
+js> r.exec('hi there bye')
+[" "]
+js> RegExp.leftContext
+there
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(0)
+js> r = / /g
+/ /g
+js> r.test('hi there bye')
+true
+js> r.test('hi there bye')
+true
+js> RegExp.leftContext
+hi there
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(120)
+js> 'a,b,c,'.split(',')
+["a", "b", "c"]
+js> 'a,b,c,'.split(',').length
+3
+js> 'a,b,c,'.split(',', 4)
+["a", "b", "c", ""]
+js> 'a,b,c,,'.split(',')
+["a", "b", "c", ""]
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(0)
+js> 'a,b,c,'.split(',')
+a,b,c,
+js> 'a,b,c,'.split(',').length
+4
+js> 'a,b,c,,'.split(',')
+a,b,c,,
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(120)
+js> 'abc'.replace(/.(b)./, '$1')
+b
+js> 'abc'.replace(/.(b)./, '\$1')
+b
+js> 'abc'.replace(/.(b)./, '\\$1')
+\$1
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(0)
+js> 'abc'.replace(/.(b)./, '$1')
+b
+js> 'abc'.replace(/.(b)./, '\$1')
+b
+js> 'abc'.replace(/.(b)./, '\\$1')
+\b
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(120)
+js> 'abc'.replace(/.(b)./, '$01')
+$01
+js> 'abc'.replace(/.(b)./, '$998877665544332211')
+44332211
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(0)
+js> 'abc'.replace(/.(b)./, '$01')
+b
+js> 'abc'.replace(/.(b)./, '$998877665544332211')
+$998877665544332211
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(120)
+js> 'hi there bye'.replace(/ /g, '$`')
+hihitherehi therebye
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(0)
+js> 'hi there bye'.replace(/ /g, '$`')
+hihitherehi therebye
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(120)
+js> '  leading space'.split(' ')
+["leading", "space"]
+js> org.mozilla.javascript.Context.getCurrentContext().setLanguageVersion(0)
+js> '  leading space'.split(' ')
+,,leading,space
+
+
+
+
+
+
