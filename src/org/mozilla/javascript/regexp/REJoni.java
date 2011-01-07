@@ -1,6 +1,7 @@
 package org.mozilla.javascript.regexp;
 
 import java.io.UnsupportedEncodingException;
+import java.util.Arrays;
 
 import org.jcodings.specific.UTF8Encoding;
 import org.joni.Matcher;
@@ -113,7 +114,6 @@ public class REJoni implements RegExpEngine {
         if (index == -1) {
             return false;
         }
-
         return true;
     }
     public int start() {
@@ -153,7 +153,7 @@ public class REJoni implements RegExpEngine {
         return result;
     }
     private int c2b(int charPos) {
-        for (int i = 0; multiPos[i] != 0 && charPos > multiPos[i]; i++) {
+        for (int i = 0; i < numMultis && charPos > multiPos[i]; i++) {
             charPos++;
         }
         return charPos;
