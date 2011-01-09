@@ -1,0 +1,2 @@
+js> /(.*?)a(?!(a+)b\2c)\2(.*)/.exec("baaabaac")
+baaabaac,ba,,abaac

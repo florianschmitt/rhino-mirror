@@ -4,8 +4,6 @@ function exec() { [native code for RegExp.exec, arity=1] }
 js> RegExp.prototype.test
 function test() { [native code for RegExp.test, arity=1] }
 
-
-
 js> // ***** Tests from ECMA spec *****
 js> "$1,$2".replace(/(\$(\d))/g, "$$1-$1$2")
 $1-$11,$1-$22
@@ -25,7 +23,6 @@ js> /(aa|aabaac|ba|b|c)*/.exec("aabaac")
 aaba,ba
 js> "aaaaaaaaaa,aaaaaaaaaaaaaaa".replace(/^(a+)\1*,\1+$/,"$1")
 aaaaa
-js> // /(z)((a+)?(b+)?(c))*/.exec("zaacbbbcac") :zaacbbbcac,z,ac,a,,c
 js> /(a*)*/.exec("b")
 ,
 js> /(a*)b\1+/.exec("baaaac")
@@ -34,8 +31,6 @@ js> /(?=(a+))/.exec("baaabac")
 ,aaa
 js> /(?=(a+))a*b\1/.exec("baaabac")
 aba,a
-js> //js> /(.*?)a(?!(a+)b\2c)\2(.*)/.exec("baaabaac") 
-js> //baaabaac,ba,,abaac
 
 
 

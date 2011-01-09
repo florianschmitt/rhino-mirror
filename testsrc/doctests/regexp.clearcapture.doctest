@@ -1,0 +1,2 @@
+js> /(z)((a+)?(b+)?(c))*/.exec("zaacbbbcac")
+zaacbbbcac,z,ac,a,,c
