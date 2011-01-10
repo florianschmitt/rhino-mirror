@@ -12,7 +12,7 @@ public class REJavaUtilRegex implements RegExpEngine {
     private boolean global;
     private boolean ignoreCase;
     private boolean multiline;
-    private boolean forceMultiline = false;
+    private boolean prevForceMultiline = false;
     private Pattern pattern;
     private Matcher m;
     private String input;
@@ -47,12 +47,12 @@ public class REJavaUtilRegex implements RegExpEngine {
     public boolean find(int start, boolean forceMultiline) {
         // if this is not multiline and forceMultiline
         // is different to last time, then recompile pattern
-        if (!multiline && this.forceMultiline != forceMultiline) {
+        if (!multiline && prevForceMultiline != forceMultiline) {
             pattern = Pattern.compile(javaUtilRegexSource,
                     flags | (forceMultiline ? Pattern.MULTILINE : 0));
             m = pattern.matcher(input);
         }
-        this.forceMultiline = forceMultiline; // save for next time
+        prevForceMultiline = forceMultiline; // save for next time
 
         // find
         return m.find(start);
