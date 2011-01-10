@@ -2,13 +2,25 @@ js> /[a-z]/i.test('\u017f\u0131\u212a')
 false
 js> /[A-Z]/i.test('\u017f\u0131\u212a')
 false
-js> /[^W]/i.test('s')
+js> /[^\W]/i.test('s')
 true
 js> /\u01f1/.test('\u01f1')
 true
+js> /[\u01f1]/.test('\u01f1')
+true
+js> /\u01f1/i.test('\u01f1')
+true
+js> /[\u01f1]/i.test('\u01f1')
+true
 js> /\u01f1/.test('\u01f3')
+false
+js> /[\u01f1]/.test('\u01f3')
 false
 js> /\u01f1/i.test('\u01f3')
 true
-js> /u0130/i.test('\u0069\u0307')
+js> /[\u01f1]/i.test('\u01f3')
+true
+js> /\u0130/i.test('\u0069\u0307')
+false
+js> /[\u0130]/i.test('\u0069\u0307')
 false
