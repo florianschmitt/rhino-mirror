@@ -92,6 +92,13 @@ js> 'abc\x08xyz'.search(/\b/)
 0
 js> 'abc\x08xyz'.search(/[\b]/)
 3
+js> 'abc'.search(/\x62+/)
+1
+js> 'abc'.search(/\u0062+/)
+1
+js> 'ab(cd\u000050'.search(/\w+\050/) // should be '3' in strict mode
+0
+
 js> // ***** add some unicode chars ***** 
 js> 'ï'.charCodeAt(0)
 239
