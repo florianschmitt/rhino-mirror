@@ -107,6 +107,8 @@ BenchmarkSuite.RunSuites = function(runner) {
   var suites = BenchmarkSuite.suites;
   var length = suites.length;
   BenchmarkSuite.scores = [];
+  BenchmarkSuite.averageTimes = [];
+  
   var index = 0;
   function RunStep() {
     while (continuation || index < length) {
@@ -125,7 +127,9 @@ BenchmarkSuite.RunSuites = function(runner) {
     if (runner.NotifyScore) {
       var score = BenchmarkSuite.GeometricMean(BenchmarkSuite.scores);
       var formatted = BenchmarkSuite.FormatScore(100 * score);
-      runner.NotifyScore(formatted);
+      var averageTime = BenchmarkSuite.FormatScore(BenchmarkSuite.ArithmeticMean(BenchmarkSuite.averageTimes));
+      var avgFormatted = BenchmarkSuite.FormatScore(averageTime / 1000);
+      runner.NotifyScore(avgFormatted + "ms, score:" + formatted);
     }
   }
   RunStep();
@@ -153,14 +157,27 @@ BenchmarkSuite.GeometricMean = function(numbers) {
   return Math.pow(Math.E, log / numbers.length);
 }
 
+// Computes the arithmetic mean of a set of numbers.
+BenchmarkSuite.ArithmeticMean = function(numbers) {
+  var sum = 0;
+  for (var i = 0; i < numbers.length; i++) {
+    sum += numbers[i];
+  }
+  return sum / numbers.length;
+}
+
+// Right pads with spaces
+BenchmarkSuite.rpad = function(s, n) { while (s.length < n) s += ' '; return s; }
+// Left pads with spaces
+BenchmarkSuite.lpad = function(s, n) { while (s.length < n) s = ' ' + s; return s; }
 
 // Converts a score value to a string with at least three significant
 // digits.
 BenchmarkSuite.FormatScore = function(value) {
   if (value > 100) {
-    return value.toFixed(0);
+    return BenchmarkSuite.lpad(value.toFixed(0), 6);
   } else {
-    return value.toPrecision(3);
+    return BenchmarkSuite.lpad(value.toPrecision(3), 6);
   }
 }
 
@@ -177,10 +194,13 @@ BenchmarkSuite.prototype.NotifyStep = function(result) {
 BenchmarkSuite.prototype.NotifyResult = function() {
   var mean = BenchmarkSuite.GeometricMean(this.results);
   var score = this.reference / mean;
+  var averageTime = BenchmarkSuite.ArithmeticMean(this.results);
   BenchmarkSuite.scores.push(score);
+  BenchmarkSuite.averageTimes.push(averageTime);
   if (this.runner.NotifyResult) {
     var formatted = BenchmarkSuite.FormatScore(100 * score);
-    this.runner.NotifyResult(this.name, formatted);
+    var avgFormatted = BenchmarkSuite.FormatScore(averageTime / 1000);
+    this.runner.NotifyResult(BenchmarkSuite.rpad(this.name, 17), avgFormatted + "ms, score:" + formatted);
   }
 }
 
