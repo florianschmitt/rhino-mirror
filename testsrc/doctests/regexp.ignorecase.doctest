@@ -1,4 +1,8 @@
-js> /[a-z]/i.test('\u017f\u0131\u212a')
+js> /[a-z]/i.test('\u017f')
+false
+js> /[a-z]/i.test('\u0131')
+false
+js> /[a-z]/i.test('\u212a')
 false
 js> /[A-Z]/i.test('\u017f\u0131\u212a')
 false
@@ -20,6 +24,8 @@ js> /\u01f1/i.test('\u01f3')
 true
 js> /[\u01f1]/i.test('\u01f3')
 true
+js> // js> /(?u:\u01f1)/i.test('\u01f3')
+js> // true
 js> /\u0130/i.test('\u0069\u0307')
 false
 js> /[\u0130]/i.test('\u0069\u0307')

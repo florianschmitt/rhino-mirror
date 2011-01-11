@@ -307,7 +307,6 @@ public class RegExpImpl implements RegExpProxy {
                                      int leftIndex, int leftlen)
     {
 
-        int replen;
         String lambdaStr;
         if (rdata.lambda != null) {
             // invoke lambda function with args lastMatch, $1, $2, ... $n,
@@ -342,7 +341,6 @@ public class RegExpImpl implements RegExpProxy {
             } finally {
                 ScriptRuntime.setRegExpProxy(cx, reImpl);
             }
-            replen = lambdaStr.length();
         } else {
             lambdaStr = null;
         }
@@ -383,7 +381,7 @@ public class RegExpImpl implements RegExpProxy {
         }
         /* Interpret all Perl match-induced dollar variables. */
         dc = da.charAt(dp + 1);
-        if (NativeRegExp.isDigit(dc)) {
+        if (isDigit(dc)) {
             int cp;
             if (version != Context.VERSION_DEFAULT
                 && version <= Context.VERSION_1_4)
@@ -394,7 +392,7 @@ public class RegExpImpl implements RegExpProxy {
                 /* Check for overflow to avoid gobbling arbitrary decimal digits. */
                 num = 0;
                 cp = dp;
-                while (++cp < daL && NativeRegExp.isDigit(dc = da.charAt(cp)))
+                while (++cp < daL && isDigit(dc = da.charAt(cp)))
                 {
                     tmp = 10 * num + (dc - '0');
                     if (tmp < num)
@@ -411,7 +409,7 @@ public class RegExpImpl implements RegExpProxy {
                 cp = dp + 2;
                 if ((dp + 2) < daL) {
                     dc = da.charAt(dp + 2);
-                    if (NativeRegExp.isDigit(dc)) {
+                    if (isDigit(dc)) {
                         tmp = 10 * num + (dc - '0');
                         if (tmp <= parenCount) {
                             cp++;
@@ -487,6 +485,10 @@ public class RegExpImpl implements RegExpProxy {
         if (daL > cp) {
             charBuf.append(da.substring(cp, daL));
         }
+    }
+
+    private static boolean isDigit(char c) {
+        return ('0' <= c) && (c <= '9');
     }
 
     /*

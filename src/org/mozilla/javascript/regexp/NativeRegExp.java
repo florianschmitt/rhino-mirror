@@ -26,6 +26,7 @@
  *   Igor Bukanov
  *   Brendan Eich
  *   Matthias Radestock
+ *   Joel Hockey
  *
  * Alternatively, the contents of this file may be used under the terms of
  * the GNU General Public License Version 2 or later (the "GPL"), in which
@@ -59,9 +60,12 @@ import org.mozilla.javascript.Undefined;
  * Merged up to version 1.38, which included Unicode support.
  * Merged bug fixes in version 1.39.
  * Merged JSFUN13_BRANCH changes up to 1.32.2.13
+ * Split regexp engine to use interface and allow other implementations
+ *  such as java.util.regex and joni
  *
  * @author Brendan Eich
  * @author Norris Boyd
+ * @author Joel Hockey
  */
 public class NativeRegExp extends IdScriptableObject implements Function {
     static final long serialVersionUID = 4965263491464903264L;
@@ -155,21 +159,6 @@ public class NativeRegExp extends IdScriptableObject implements Function {
     @Override
     public String getTypeOf() {
         return "object";
-    }
-
-    public Object xxxcall(Context cx, Scriptable scope, Scriptable thisObj,
-        Object[] args) {
-        // treat same as exec.  e.g.  'r(s)' equivalent to 'r.exec(s)'
-        String execInput = getInput(args);
-
-        return js_exec(cx, scope, execInput);
-    }
-
-    public Scriptable xxxconstruct(Context cx, Scriptable scope, Object[] args) {
-        // treat same as exec.  e.g.  'new r(s)' equivalent to 'r.exec(s)'
-        String execInput = getInput(args);
-
-        return js_exec(cx, scope, execInput);
     }
 
     public Object call(Context cx, Scriptable scope, Scriptable thisObj,
@@ -310,31 +299,30 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
         if (escape) {
             if (ignoreCase) {
-                  return new REJoni(escRe(source),
-                      global, ignoreCase, multiline, bomWs);
+return new REJoni(escRe(source), global, ignoreCase, multiline, bomWs);
+//return new RERhino(cx, source, global, ignoreCase, multiline, escape);
+//return new REJavaUtilRegex(source, global, ignoreCase, multiline, escape, bomWs);
             } else {
                 return new REIndexOf(source, source, global, multiline);
             }
         } else {
             if (ignoreCase) {
-                  return new REJoni(source, global, ignoreCase, multiline, bomWs);
+return new REJoni(source, global, ignoreCase, multiline, bomWs);
+//return new RERhino(cx, source, global, ignoreCase, multiline, escape);
+//return new REJavaUtilRegex(source, global, ignoreCase, multiline, false, bomWs);
             } else {
                 String compiled = compileTextOnly(source);
 
                 if (compiled != null) {
                     return new REIndexOf(source, compiled, global, multiline);
                 } else {
-                    return new REJoni(source,
-                        global, ignoreCase, multiline, bomWs);
+return new REJoni(source, global, ignoreCase, multiline, bomWs);
+//return new RERhino(cx, source, global, ignoreCase, multiline, escape);
+//return new REJavaUtilRegex(source, global, ignoreCase, multiline, false, bomWs);
                 }
             }
         }
     }
-
-    static boolean isDigit(char c) {
-        return ('0' <= c) && (c <= '9');
-    }
-
 
     /*
      * indexp is assumed to be an array of length 1
@@ -349,12 +337,13 @@ public class NativeRegExp extends IdScriptableObject implements Function {
             start = end;
         }
 
-        //
-        // Call the engine matcher to do the real work.
+        // only set the input if it has changed, this has big perf gain
+        // when regexp engine converts string to char or byte array
         if (!str.equals(re.getInput())) {
             re.setInput(str);
         }
 
+        // Call the engine matcher to do the real work.
         boolean matches = re.find(start, res.multiline);
         if (!matches) {
             if (matchType != PREFIX) {

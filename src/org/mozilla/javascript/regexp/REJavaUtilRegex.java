@@ -3,66 +3,162 @@ package org.mozilla.javascript.regexp;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-
+/**
+ * RegExp engine using java.util.regex.
+ *
+ * @author Joel Hockey
+ */
 public class REJavaUtilRegex implements RegExpEngine {
 
+    // original regexp source
     private String source;
+    // source compiled to java.util.regex syntax
     private String javaUtilRegexSource;
+    // flags for java.util.regex
     private int flags;
     private boolean global;
     private boolean ignoreCase;
     private boolean multiline;
+
+    // true if \s matches unicode byte-order-mark
+    private boolean bomWs;
+
+    // java.util.regexp must be recompiled if RegExp.multiline
+    // is different to multiline
     private boolean prevForceMultiline = false;
+
+    // java.util.regex objects
     private Pattern pattern;
-    private Matcher m;
+    private Matcher matcher;
+
+    // input to match against
     private String input;
 
+    // JavaScript requires capture groups to be cleared when inside
+    // a repeating atom.  JUR will only overwrite groups if they match again
+    // JUR also (maybe bug) matches capture groups in a negative lookahead
+    // To fix this, we look at capture groups and even if JUR has a match,
+    // we return null if we detect that capture index is before previous,
+    // or within neg lookahead
+    private boolean[] validCapture;
+    // bitset showing which capture groups are in neg lookahead
+    private int negLookCapBs;
+
+    /**
+     * engine constructor
+     * @param source regexp source
+     * @param global global flag
+     * @param ignoreCase ignoreCase flag
+     * @param multiline multiline flat
+     * @param literal if true, source is literal
+     * @param bomWs true if \s matches unicode byte-order-mark
+     */
     public REJavaUtilRegex(String source, boolean global,
-            boolean ignoreCase, boolean multiline) {
+            boolean ignoreCase, boolean multiline, boolean literal,
+            boolean bomWs) {
         this.source = source;
         this.global = global;
         this.ignoreCase = ignoreCase;
         this.multiline = multiline;
+        this.bomWs = bomWs;
         flags = 0;
+
+        // set flags
+        if (literal) {
+            flags |= Pattern.LITERAL;
+            this.javaUtilRegexSource = source;
+        } else {
+            // compile to java.util.regex syntax
+            this.javaUtilRegexSource = js2javaUtilRegex();
+        }
+
         if (ignoreCase) {
             flags |= Pattern.CASE_INSENSITIVE;
         }
         if (multiline) {
             flags |= Pattern.MULTILINE;
         }
-        this.javaUtilRegexSource = js2javaUtilRegex(source);
         this.pattern = Pattern.compile(javaUtilRegexSource, flags);
     }
+
     @Override
-    public String toString() { return NativeRegExp.toString(this); }
-    public String source() { return source; }
-    public boolean global() { return global; }
-    public boolean ignoreCase() { return ignoreCase; }
-    public boolean multiline() { return multiline; }
+    public String toString() {
+        return NativeRegExp.toString(this);
+    }
+
+    public String source() {
+        return source;
+    }
+
+    public boolean global() {
+        return global;
+    }
+
+    public boolean ignoreCase() {
+        return ignoreCase;
+    }
+
+    public boolean multiline() {
+        return multiline;
+    }
+
     public void setInput(String input) {
         this.input = input;
-        m = pattern.matcher(input);
+        matcher = pattern.matcher(input);
     }
-    public String getInput() { return input; }
+
+    public String getInput() {
+        return input;
+    }
+
     public boolean find(int start, boolean forceMultiline) {
         // if this is not multiline and forceMultiline
         // is different to last time, then recompile pattern
         if (!multiline && prevForceMultiline != forceMultiline) {
             pattern = Pattern.compile(javaUtilRegexSource,
                     flags | (forceMultiline ? Pattern.MULTILINE : 0));
-            m = pattern.matcher(input);
+            matcher = pattern.matcher(input);
         }
         prevForceMultiline = forceMultiline; // save for next time
 
-        // find
-        return m.find(start);
-    }
-    public int start() { return m.start(); }
-    public int end() { return m.end(); }
-    public int groupCount() { return m.groupCount(); }
-    public String group(int group) { return m.group(group); }
+        // clear valid capture groups
+        validCapture = null;
 
-    public static String js2javaUtilRegex(String regexp) {
+        // find
+        return matcher.find(start);
+    }
+
+    public int start() {
+        return matcher.start();
+    }
+
+    public int end() {
+        return matcher.end();
+    }
+
+    public int groupCount() {
+        return matcher.groupCount();
+    }
+
+    public String group(int group) {
+        // remove any capture groups that were not cleared
+        // in a repetition, or any capture groups within
+        // a negative lookahead
+        if (validCapture == null) {
+            validCapture = new boolean[matcher.groupCount() + 1];
+            int lastCaptureStart = 0;
+            for (int i = 0; i < validCapture.length; i++) {
+                if ((negLookCapBs & (1 << i)) == 0
+                        &&  matcher.start(i) >= lastCaptureStart) {
+                    validCapture[i] = true;
+                    lastCaptureStart = matcher.start(i);
+                }
+            }
+        }
+        return validCapture[group] ? matcher.group(group) : null;
+    }
+
+    public String js2javaUtilRegex() {
         // Translate regexp from js to java.
         // Some symbols have different translations depending on whether
         // they are used as regular characters (c), or inside a character
@@ -86,18 +182,30 @@ public class REJavaUtilRegex implements RegExpEngine {
         StringBuilder javaUtilRegex = new StringBuilder();
         boolean inCC = false; // inside character class
         boolean negCC = false; // negated character class
-        for (int i = 0; i < regexp.length(); i++) {
-            char c = regexp.charAt(i);
+        boolean inNegLook = false; // negative lookahead
+
+        int negLookBrackets = 0;
+        int captureCount = 0;
+
+        for (int i = 0; i < source.length(); i++) {
+            char c = source.charAt(i);
             switch (c) {
             case '\\': // escape-sequence
-                if (regexp.length() <= i) { // dangling slash at end of regexp
+                if (source.length() <= i) { // dangling slash at end of regexp
                     javaUtilRegex.append('\\');
                     break;
                 }
-                c = regexp.charAt(++i);
+                c = source.charAt(++i);
                 switch (c) {
                 case '0': // 1.* '\0' => '\x00'
                     javaUtilRegex.append("\\x00");
+                    break;
+                case '1': case '2': case '3': case '4': case '5':
+                case '6': case '7': case '8': case '9':
+                    // 5. Remove invalid backreferences to negative lookaheads
+                    if (inNegLook || (negLookCapBs & (1 << (c-'0'))) == 0) {
+                        javaUtilRegex.append('\\').append(c);
+                    }
                     break;
                 case 'v': // 2.* '\v' => '\x0b'
                     javaUtilRegex.append("\\x0b");
@@ -110,6 +218,10 @@ public class REJavaUtilRegex implements RegExpEngine {
                     }
                     break;
                 case 's':
+                    if (!bomWs) {
+                        javaUtilRegex.append("\\s");
+                        break;
+                    }
                     if (inCC) { // 5.cc+- '\s' => '\s\ufeff'
                         javaUtilRegex.append("\\s\\ufeff");
                     } else {    // 5.c    '\s' => '[\s\ufeff]'
@@ -117,6 +229,10 @@ public class REJavaUtilRegex implements RegExpEngine {
                     }
                     break;
                 case 'S':
+                    if (!bomWs) {
+                        javaUtilRegex.append("\\S");
+                        break;
+                    }
                     if (inCC) {
                         if (negCC) { // 6.cc- '\S' => '\S[\ufeff]'
                             javaUtilRegex.append("\\S[\\ufeff]");
@@ -138,9 +254,9 @@ public class REJavaUtilRegex implements RegExpEngine {
                 }
 
                 // start of character class, check if negated
-                if (regexp.length() > i+1 && regexp.charAt(i+1) == '^') {
+                if (source.length() > i+1 && source.charAt(i+1) == '^') {
                     // check for special match of '[^]'
-                    if (regexp.length() > i+2 && regexp.charAt(i+2) == ']') {
+                    if (source.length() > i+2 && source.charAt(i+2) == ']') {
                         // 3.* '[^]' => '[\s\S]'
                         javaUtilRegex.append("[\\s\\S]");
                         i += 2;
@@ -156,6 +272,29 @@ public class REJavaUtilRegex implements RegExpEngine {
                 inCC = false;
                 negCC = false;
                 javaUtilRegex.append(']');
+                break;
+            case '(':
+                if (i + 1 < source.length() && source.charAt(i + 1) == '?') {
+                    if (i + 2 < source.length() && source.charAt(i + 2) == '!') {
+                        inNegLook = true;
+                        negLookBrackets++;
+                    }
+                } else {
+                    captureCount++;
+                    if (inNegLook) {
+                        // set neg look bitset
+                        negLookCapBs |= (1 << captureCount);
+                        negLookBrackets++;
+                    }
+                }
+                javaUtilRegex.append('(');
+                break;
+            case ')':
+                if (inNegLook) {
+                    negLookBrackets--;
+                    inNegLook = negLookBrackets > 0;
+                }
+                javaUtilRegex.append(')');
                 break;
             default:
                 javaUtilRegex.append(c);

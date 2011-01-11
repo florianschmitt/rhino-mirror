@@ -371,8 +371,12 @@ public class RERhino implements RegExpEngine, Serializable {
         }
     }
 
+    private static boolean isDigit(char c) {
+        return ('0' <= c) && (c <= '9');
+    }
+
     private static boolean isWord(char c) {
-        return Character.isLetter(c) || NativeRegExp.isDigit(c) || (c == '_');
+        return Character.isLetter(c) || isDigit(c) || (c == '_');
     }
 
     private static boolean isLineTerm(char c) {
@@ -813,7 +817,7 @@ public class RERhino implements RegExpEngine, Serializable {
         for (; state.cp != state.cpend; ++state.cp) {
             c = src[state.cp];
 
-            if (!NativeRegExp.isDigit(c)) {
+            if (!isDigit(c)) {
                 break;
             }
 
@@ -1273,7 +1277,7 @@ public class RERhino implements RegExpEngine, Serializable {
              */
             c = src[++state.cp];
 
-            if (NativeRegExp.isDigit(c)) {
+            if (isDigit(c)) {
                 ++state.cp;
                 min = getDecimalValue(c, state, 0xFFFF, "msg.overlarge.min");
                 c = src[state.cp];
@@ -1281,7 +1285,7 @@ public class RERhino implements RegExpEngine, Serializable {
                 if (c == ',') {
                     c = src[++state.cp];
 
-                    if (NativeRegExp.isDigit(c)) {
+                    if (isDigit(c)) {
                         ++state.cp;
                         max = getDecimalValue(c, state, 0xFFFF,
                                 "msg.overlarge.max");
@@ -2047,8 +2051,7 @@ public class RERhino implements RegExpEngine, Serializable {
                 break;
 
             case REOP_DIGIT:
-                result = ((gData.cp != end) &&
-                    NativeRegExp.isDigit(chars[gData.cp]));
+                result = ((gData.cp != end) && isDigit(chars[gData.cp]));
 
                 if (result) {
                     gData.cp++;
@@ -2057,8 +2060,7 @@ public class RERhino implements RegExpEngine, Serializable {
                 break;
 
             case REOP_NONDIGIT:
-                result = ((gData.cp != end) &&
-                    !NativeRegExp.isDigit(chars[gData.cp]));
+                result = ((gData.cp != end) && !isDigit(chars[gData.cp]));
 
                 if (result) {
                     gData.cp++;
