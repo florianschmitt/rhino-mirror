@@ -13,8 +13,6 @@ import org.joni.Syntax.MetaCharTable;
 import org.joni.WarnCallback;
 import org.joni.constants.MetaChar;
 
-import sun.misc.Cleaner;
-
 /**
  * RegExp engine using joni.
  *
