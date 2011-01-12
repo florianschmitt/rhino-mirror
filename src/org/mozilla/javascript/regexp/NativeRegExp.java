@@ -404,7 +404,7 @@ return new REJoni(source, global, ignoreCase, multiline, bomWs);
              * Define the index and input properties last for better for/in loop
              * order (so they come after the elements).
              */
-            obj.put("index", obj, Integer.valueOf(re.end()));
+            obj.put("index", obj, Integer.valueOf(re.start()));
 
             obj.put("input", obj, str);
         }
