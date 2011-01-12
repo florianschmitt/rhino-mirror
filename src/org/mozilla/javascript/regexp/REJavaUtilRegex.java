@@ -61,7 +61,7 @@ public class REJavaUtilRegex implements RegExpEngine {
         this.ignoreCase = ignoreCase;
         this.multiline = multiline;
         this.bomWs = bomWs;
-        flags = 0;
+        flags = Pattern.UNICODE_CASE;
 
         // set flags
         if (literal) {
@@ -163,7 +163,7 @@ public class REJavaUtilRegex implements RegExpEngine {
         // Some symbols have different translations depending on whether
         // they are used as regular characters (c), or inside a character
         // class in either positive (cc+) or negated (cc-) form.
-        // 1.*     '\0'  => '\x00'
+        // 1.*     '\0'  => '\x00' unless \nnn is valid octal
         // 2.*     '\v'  => '\x0b'
         // 3.*     '[^]' => '[\s\S]'
         // 4.      '\b':
@@ -197,8 +197,13 @@ public class REJavaUtilRegex implements RegExpEngine {
                 }
                 c = source.charAt(++i);
                 switch (c) {
-                case '0': // 1.* '\0' => '\x00'
-                    javaUtilRegex.append("\\x00");
+                case '0': // 1.* '\0' => '\x00' unless \nnn is valid octal
+                    if (i + 2 < source.length() && isOct(source.charAt(i + 1))
+                            && isOct(source.charAt(i + 2))) {
+                        javaUtilRegex.append("\\0"); // leave as-is
+                    } else {
+                        javaUtilRegex.append("\\x00");
+                    }
                     break;
                 case '1': case '2': case '3': case '4': case '5':
                 case '6': case '7': case '8': case '9':
@@ -301,5 +306,9 @@ public class REJavaUtilRegex implements RegExpEngine {
             }
         }
         return javaUtilRegex.toString();
+    }
+
+    private static boolean isOct(char c) {
+        return c >= '0' && c <= '7';
     }
 }
