@@ -187,7 +187,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
         String s = (args.length == 0) ? "" : ScriptRuntime.toString(args[0]);
         String global = ((args.length > 1) && (args[1] != Undefined.instance))
             ? ScriptRuntime.toString(args[1]) : null;
-        this.re = (RegExpEngine) compileRE(cx, s, global, false);
+        this.re = compileRE(cx, s, global, false);
         this.lastIndex = 0;
 
         return this;
@@ -230,16 +230,18 @@ public class NativeRegExp extends IdScriptableObject implements Function {
         return (RegExpImpl) ScriptRuntime.getRegExpProxy(cx);
     }
 
-    private Object execSub(Context cx, Scriptable scopeObj, Object[] args,
-        int matchType) {
+    private Object execSub(Context cx, Scriptable scopeObj,
+                           Object[] args, int matchType) {
         RegExpImpl reImpl = getImpl(cx);
-
+        String str;
         if (args.length == 0) {
-            reportError("msg.no.re.input.for", toString());
+            str = reImpl.input;
+            if (str == null) {
+                reportError("msg.no.re.input.for", toString());
+            }
+        } else {
+            str = ScriptRuntime.toString(args[0]);
         }
-
-        String str = ScriptRuntime.toString(args[0]);
-
         double d = re.global() ? lastIndex : 0;
 
         Object rval;
