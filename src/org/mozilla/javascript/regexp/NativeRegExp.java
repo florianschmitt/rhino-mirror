@@ -111,7 +111,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
     // #/string_id_map#
     RegExpEngine re;
-    int lastIndex; /* index after last match, for //g iterator */
+    double lastIndex; /* index after last match, for //g iterator */
 
     NativeRegExp(Scriptable scope, Object regexpEngine) {
         this.re = (RegExpEngine) regexpEngine;
@@ -240,7 +240,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
 
         String str = ScriptRuntime.toString(args[0]);
 
-        int d = re.global() ? lastIndex : 0;
+        double d = re.global() ? lastIndex : 0;
 
         Object rval;
 
@@ -587,7 +587,7 @@ L0:  {
     protected void setInstanceIdValue(int id, Object value) {
         switch (id) {
         case Id_lastIndex:
-            lastIndex = (int) ScriptRuntime.toNumber(value);
+            lastIndex = ScriptRuntime.toNumber(value);
 
             return;
 
