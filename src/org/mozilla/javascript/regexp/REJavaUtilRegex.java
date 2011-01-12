@@ -61,7 +61,7 @@ public class REJavaUtilRegex implements RegExpEngine {
         this.ignoreCase = ignoreCase;
         this.multiline = multiline;
         this.bomWs = bomWs;
-        flags = Pattern.UNICODE_CASE;
+        flags = 0;
 
         // set flags
         if (literal) {
