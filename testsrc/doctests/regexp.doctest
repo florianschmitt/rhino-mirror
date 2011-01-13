@@ -35,9 +35,9 @@ aba,a
 
 
 js> //  ***** Test empty / null / undefined input ***** 
+js> RegExp.input = ''
 js> /abc/.exec()
-js: "doctest input", line 1: uncaught JavaScript runtime exception: SyntaxError: no input for /abc/
-	at doctest input:1
+null
 js> JSON.stringify(/abc/.exec(null))
 null
 js> JSON.stringify(/null/.exec(null))
@@ -46,9 +46,9 @@ js> /abc/.exec(undefined)
 null
 js> /undefined/.exec(undefined)
 undefined
+js> RegExp.input = ''
 js> /abc/.test()
-js: "doctest input", line 1: uncaught JavaScript runtime exception: SyntaxError: no input for /abc/
-	at doctest input:1
+false
 js> /abc/.test(null)
 false
 js> /null/.test(null)
