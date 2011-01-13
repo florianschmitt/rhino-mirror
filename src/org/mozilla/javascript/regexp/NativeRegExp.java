@@ -78,12 +78,6 @@ public class NativeRegExp extends IdScriptableObject implements Function {
     public static final int MATCH = 1;
     public static final int PREFIX = 2;
 
-    static {
-        for (int i = 0; i < REGEXP_BS_META.length(); i++) {
-            REGEXP_LKP_BS_META[REGEXP_BS_META.charAt(i)] = true;
-        }
-    }
-
     // #string_id_map#
     private static final int Id_lastIndex = 1;
 
@@ -108,6 +102,12 @@ public class NativeRegExp extends IdScriptableObject implements Function {
     private static final int Id_test = 5;
     private static final int Id_prefix = 6;
     private static final int MAX_PROTOTYPE_ID = 6;
+
+    static {
+        for (int i = 0; i < REGEXP_BS_META.length(); i++) {
+            REGEXP_LKP_BS_META[REGEXP_BS_META.charAt(i)] = true;
+        }
+    }
 
     // #/string_id_map#
     RegExpEngine re;
@@ -299,31 +299,15 @@ public class NativeRegExp extends IdScriptableObject implements Function {
         //   F        T         use standard engine
         //   F        F         if compileTextOnly, use IndexOf else standard
 
-        if (escape) {
-            if (ignoreCase) {
-return new REJoni(escRe(source), global, ignoreCase, multiline, bomWs);
-//return new RERhino(cx, source, global, ignoreCase, multiline, escape);
-//return new REJavaUtilRegex(source, global, ignoreCase, multiline, escape, bomWs);
-            } else {
-                return new REIndexOf(source, source, global, multiline);
-            }
-        } else {
-            if (ignoreCase) {
-return new REJoni(source, global, ignoreCase, multiline, bomWs);
-//return new RERhino(cx, source, global, ignoreCase, multiline, escape);
-//return new REJavaUtilRegex(source, global, ignoreCase, multiline, false, bomWs);
-            } else {
-                String compiled = compileTextOnly(source);
-
-                if (compiled != null) {
-                    return new REIndexOf(source, compiled, global, multiline);
-                } else {
-return new REJoni(source, global, ignoreCase, multiline, bomWs);
-//return new RERhino(cx, source, global, ignoreCase, multiline, escape);
-//return new REJavaUtilRegex(source, global, ignoreCase, multiline, false, bomWs);
-                }
+        if (!ignoreCase) {
+            String compiled = escape ? source : compileTextOnly(source);
+            if (compiled != null) {
+                return new REIndexOf(source, compiled, global, multiline);
             }
         }
+return new REJoni(source, global, ignoreCase, multiline, escape, bomWs);
+//return new RERhino(cx, source, global, ignoreCase, multiline, escape);
+//return new REJavaUtilRegex(source, global, ignoreCase, multiline, escape, bomWs);
     }
 
     /*
@@ -754,72 +738,6 @@ L:
 
         // #/generated#
         return id;
-    }
-
-    boolean js_test(Context cx, Scriptable scope, String input) {
-        //        // only set input if different to avoid possible charset conversion
-        //        if (!input.equals(re.getInput())) {
-        //            re.setInput(input);
-        //        }
-        //
-        //        // start form lastIndex
-        //        if (lastIndex >= re.getInput().length() || !re.find(lastIndex)) {
-        //            lastIndex = 0;
-        //            return false;
-        //        }
-        //
-        //        // update static RegExp properties when we find a match
-        //        RegExpImpl reImpl = getImpl(cx);
-        //        reImpl.setStaticProps(cx, re, lastIndex);
-        //
-        //        // update local lastIndex if global
-        //        if (re.global()) {
-        //            lastIndex = re.end();
-        //        }
-        return true;
-    }
-
-    Scriptable js_exec(Context cx, Scriptable scope, String input) {
-        //        // only set input if different to avoid possible charset conversion
-        //        if (!input.equals(re.getInput())) {
-        //            re.setInput(input);
-        //        }
-        //
-        //        // start from lastIndex
-        //        if (lastIndex >= re.getInput().length() || !re.find(lastIndex)) {
-        //            lastIndex = 0;
-        //            return null;
-        //        }
-        //
-        //        // update static RegExp properties when we find a match
-        //        RegExpImpl reImpl = getImpl(cx);
-        //        reImpl.setStaticProps(cx, re, lastIndex);
-        //
-        //        // update local lastIndex if global
-        //        if (re.global()) {
-        //            lastIndex = re.end();
-        //        }
-
-        // put results into array
-        // a[0] = match, a[n] = captured groups
-        Scriptable result = cx.newObject(scope, "Array");
-
-        //        for (int i = 0; i <= re.groupCount(); i++) {
-        //            result.put(i, result, re.group(i));
-        //        }
-        //
-        //        // a.index = leftContext.length, a.input = input
-        //        result.put("index", result, re.start());
-        //        result.put("input", result, re.getInput());
-        return result;
-    }
-
-    private String getInput(Object[] args) {
-        if (args.length == 0) {
-            reportError("msg.no.re.input.for", toString());
-        }
-
-        return ScriptRuntime.toString(args[0]);
     }
 
     /**

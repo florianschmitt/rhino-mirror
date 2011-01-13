@@ -84,18 +84,23 @@ public class REJoni implements RegExpEngine {
      * @param global global flag
      * @param ignoreCase ignoreCase flag
      * @param multiline multiline flat
+     * @param escape if true, source is literal and should be escaped
      * @param bomWs true if \s matches unicode byte-order-mark
      */
     public REJoni(String source, boolean global, boolean ignoreCase,
-            boolean multiline, boolean bomWs) {
+            boolean multiline, boolean escape, boolean bomWs) {
         this.source = source;
         this.global = global;
         this.ignoreCase = ignoreCase;
         this.multiline = multiline;
 
         try {
-            // compile to joni syntax
-            joniSource = js2joni(source, bomWs);
+            // escape or compile to joni syntax
+            if (escape) {
+                joniSource = NativeRegExp.escRe(source);
+            } else {
+                joniSource = js2joni(source, bomWs);
+            }
             sourcebuf = joniSource.getBytes("UTF-8");
             regex = regex(sourcebuf, ignoreCase, multiline);
         } catch (UnsupportedEncodingException e) {
