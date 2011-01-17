@@ -19,27 +19,27 @@ import org.mozilla.javascript.RegExpEngine;
 public class RegExpEngineFactory implements RegExpEngine.Factory, Serializable {
     private static final long serialVersionUID = 0x275AD2C034392B57L;
 
-    private static RegExpEngine.Factory INSTANCE;
+    public static final RegExpEngine.Factory INSTANCE;
 
     static {
         String sysProp = System.getProperty("rhino.regexp.engine");
-        if (sysProp != null) {
-            if ("joni".equalsIgnoreCase(sysProp)) {
-                INSTANCE = new REJoni.Factory();
-            } else if ("java.util.regex".equalsIgnoreCase(sysProp)) {
-                INSTANCE = new REJavaUtilRegex.Factory();
-            } else if ("rhino".equalsIgnoreCase(sysProp)) {
-                INSTANCE = new RERhino.Factory();
-            }
-        }
-        if (INSTANCE == null) {
-            if (Kit.classOrNull("org.joni.Regex") != null) {
-                INSTANCE = new REJoni.Factory();
-            } else if (Kit.classOrNull("java.util.regex.Pattern") != null) {
-                INSTANCE = new REJavaUtilRegex.Factory();
-            } else {
-                INSTANCE = new RERhino.Factory();
-            }
+        // look for system prop
+        if ("joni".equalsIgnoreCase(sysProp)) {
+            INSTANCE = new REJoni.Factory();
+        } else if ("java.util.regex".equalsIgnoreCase(sysProp)) {
+            INSTANCE = new REJavaUtilRegex.Factory();
+        } else if ("rhino".equalsIgnoreCase(sysProp)) {
+            INSTANCE = new RERhino.Factory();
+
+        // look in classpath for joni / java.util.regex
+        } else if (Kit.classOrNull("org.joni.Regex") != null) {
+            INSTANCE = new REJoni.Factory();
+        } else if (Kit.classOrNull("java.util.regex.Pattern") != null) {
+            INSTANCE = new REJavaUtilRegex.Factory();
+
+        // default is rhino
+        } else {
+            INSTANCE = new RERhino.Factory();
         }
     }
 
