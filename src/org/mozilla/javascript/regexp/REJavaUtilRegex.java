@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
  * @author Joel Hockey
  */
 public class REJavaUtilRegex implements RegExpEngine {
+    private static final char[] HEX = "0123456789abcdef".toCharArray();
 
     // original regexp source
     private String source;
@@ -20,8 +21,9 @@ public class REJavaUtilRegex implements RegExpEngine {
     private boolean ignoreCase;
     private boolean multiline;
 
-    // true if \s matches unicode byte-order-mark
-    private boolean bomWs;
+    // whitespace character class - may also get bom ufeff
+    private String wscc = "\\u0009-\\u000d\\u0020\\u0085\\u00a0\\u1680"
+        + "\\u180e\\u2000\\u2028\\u2029\\u202f\\u205f\\u3000";
 
     // java.util.regexp must be recompiled if RegExp.multiline
     // is different to multiline
@@ -42,7 +44,7 @@ public class REJavaUtilRegex implements RegExpEngine {
     // or within neg lookahead
     private boolean[] validCapture;
     // bitset showing which capture groups are in neg lookahead
-    private int negLookCapBs;
+    private long negLookCapBs;
 
     /**
      * engine constructor
@@ -60,16 +62,18 @@ public class REJavaUtilRegex implements RegExpEngine {
         this.global = global;
         this.ignoreCase = ignoreCase;
         this.multiline = multiline;
-        this.bomWs = bomWs;
+        if (bomWs) {
+            wscc += "\\ufeff";
+        }
         flags = 0;
 
         // set flags
         if (literal) {
             flags |= Pattern.LITERAL;
-            this.javaUtilRegexSource = source;
+            javaUtilRegexSource = source;
         } else {
             // compile to java.util.regex syntax
-            this.javaUtilRegexSource = js2javaUtilRegex();
+            javaUtilRegexSource = js2javaUtilRegex();
         }
 
         if (ignoreCase) {
@@ -141,15 +145,15 @@ public class REJavaUtilRegex implements RegExpEngine {
     }
 
     public String group(int group) {
-        // remove any capture groups that were not cleared
-        // in a repetition, or any capture groups within
-        // a negative lookahead
+        // remove any capture groups that were not cleared in a repetition,
+        // also remove any groups that are inside neglookaheads
         if (validCapture == null) {
             validCapture = new boolean[matcher.groupCount() + 1];
+            validCapture[0] = true;
             int lastCaptureStart = 0;
-            for (int i = 0; i < validCapture.length; i++) {
+            for (int i = 1; i < validCapture.length; i++) {
                 if ((negLookCapBs & (1 << i)) == 0
-                        &&  matcher.start(i) >= lastCaptureStart) {
+                        && matcher.start(i) >= lastCaptureStart) {
                     validCapture[i] = true;
                     lastCaptureStart = matcher.start(i);
                 }
@@ -163,19 +167,19 @@ public class REJavaUtilRegex implements RegExpEngine {
         // Some symbols have different translations depending on whether
         // they are used as regular characters (c), or inside a character
         // class in either positive (cc+) or negated (cc-) form.
-        // 1.*     '\0'  => '\x00' unless \nnn is valid octal
+        // 1.      octal => 'u00hh'
         // 2.*     '\v'  => '\x0b'
         // 3.*     '[^]' => '[\s\S]'
         // 4.      '\b':
         //   c)          => '\b'
         //   cc+-)       => '\x08'
         // 5.      '\s':
-        //   c)          => '[\s\ufeff]'
-        //   cc+-)       => '\s\ufeff'
+        //   c)          => '[u...]'
+        //   cc+-)       => 'u...'
         // 6.      '\S':
-        //   c)          => '[\S&&[^\ufeff]]'
-        //   cc+)        => '\S&&[^\ufeff]'
-        //   cc-)        => '\S[\ufeff]'
+        //   c)          => '[^u...]
+        //   cc+)        => '&&[^u...]'
+        //   cc-)        => '[u...]'
         // 7.      '[':
         //   cc+-)       => '\['
 
@@ -197,19 +201,47 @@ public class REJavaUtilRegex implements RegExpEngine {
                 }
                 c = source.charAt(++i);
                 switch (c) {
-                case '0': // 1.* '\0' => '\x00' unless \nnn is valid octal
-                    if (i + 2 < source.length() && isOct(source.charAt(i + 1))
-                            && isOct(source.charAt(i + 2))) {
-                        javaUtilRegex.append("\\0"); // leave as-is
+                case '0': case '1': case '2': case '3': case '4':
+                case '5': case '6': case '7': case '8': case '9':
+                    // it is tricky to detect difference between backref and oct
+                    // if c between 1 and 'captureCount' it is a bref
+                    // if c > '7', it is literal '\\c'
+                    // else octal escape.  Parse 1 or 2 more octal chars
+                    int cdec = c - '0';
+                    // backref
+                    if ((cdec >= 1 && cdec <= captureCount)) {
+                        // 6. Remove invalid backreferences to neg lookaheads
+                        if (inNegLook || (negLookCapBs & (1 << cdec)) == 0) {
+                            javaUtilRegex.append('\\').append(c);
+                        }
+
+                    // literal '\\c'
+                    } else if (cdec > 7) {
+                        javaUtilRegex.append('\\').append('\\').append(c);
+
+                    // octal   => 'u00hh'
                     } else {
-                        javaUtilRegex.append("\\x00");
-                    }
-                    break;
-                case '1': case '2': case '3': case '4': case '5':
-                case '6': case '7': case '8': case '9':
-                    // 5. Remove invalid backreferences to negative lookaheads
-                    if (inNegLook || (negLookCapBs & (1 << (c-'0'))) == 0) {
-                        javaUtilRegex.append('\\').append(c);
+                        int num = cdec;
+                        // if first char 0, 1, 2, 3, parse 2 more, else 1 more
+                        int oneOrTwo = c > '3' ? 1 : 2;
+                        for (int octIndex = 0; octIndex < oneOrTwo
+                                && i+1 < source.length(); octIndex++) {
+
+                            cdec = source.charAt(++i) - '0';
+                            // if non-octal char, then just use what we have
+                            if (cdec < 0 || cdec > 7) {
+                                i--; // backup main index 'i'
+                                break;
+                            }
+                            num = (num << 3) | cdec;
+                        }
+                        // convert num to unicode escape
+                        char[] u4 = new char[4];
+                        for (int u4pos = 3; u4pos >= 0; u4pos--) {
+                            u4[u4pos] = HEX[num & 0xf];
+                            num >>= 4;
+                        }
+                        javaUtilRegex.append("\\u").append(u4);
                     }
                     break;
                 case 'v': // 2.* '\v' => '\x0b'
@@ -223,29 +255,21 @@ public class REJavaUtilRegex implements RegExpEngine {
                     }
                     break;
                 case 's':
-                    if (!bomWs) {
-                        javaUtilRegex.append("\\s");
-                        break;
-                    }
-                    if (inCC) { // 5.cc+- '\s' => '\s\ufeff'
-                        javaUtilRegex.append("\\s\\ufeff");
-                    } else {    // 5.c    '\s' => '[\s\ufeff]'
-                        javaUtilRegex.append("[\\s\\ufeff]");
+                    if (inCC) { // 5.cc+-) '\s' => 'u...'
+                        javaUtilRegex.append(wscc);
+                    } else { // 5.c) '\s' => '[u...]'
+                        javaUtilRegex.append('[').append(wscc).append(']');
                     }
                     break;
                 case 'S':
-                    if (!bomWs) {
-                        javaUtilRegex.append("\\S");
-                        break;
-                    }
                     if (inCC) {
-                        if (negCC) { // 6.cc- '\S' => '\S[\ufeff]'
-                            javaUtilRegex.append("\\S[\\ufeff]");
-                        } else {     // 6.cc+ '\S' => '\S&&[^\ufeff]'
-                            javaUtilRegex.append("\\S&&[^\\ufeff]");
+                        if (negCC) { // 6.cc-) '\S' => '[u...]'
+                            javaUtilRegex.append('[').append(wscc).append(']');
+                        } else { // 6.cc+) '\S' => '&&[^u...]'
+                            javaUtilRegex.append("&&[^").append(wscc).append(']');
                         }
-                    } else {         // 6.c   '\S' => '[\S&&[^\ufeff]]'
-                        javaUtilRegex.append("[\\S&&[^\\ufeff]]");
+                    } else { // 6.c) '\S' => '[^u...]'
+                        javaUtilRegex.append('[').append('^').append(wscc).append(']');
                     }
                     break;
                 default: // leave the escape 'as-is'
@@ -287,8 +311,10 @@ public class REJavaUtilRegex implements RegExpEngine {
                 } else {
                     captureCount++;
                     if (inNegLook) {
-                        // set neg look bitset
-                        negLookCapBs |= (1 << captureCount);
+                        // set neg look bitset, only support 63 captures
+                        if (captureCount < 64) {
+                            negLookCapBs |= (1L << captureCount);
+                        }
                         negLookBrackets++;
                     }
                 }
@@ -308,7 +334,17 @@ public class REJavaUtilRegex implements RegExpEngine {
         return javaUtilRegex.toString();
     }
 
-    private static boolean isOct(char c) {
-        return c >= '0' && c <= '7';
+    public static void main(String[] args) throws Exception {
+        String source = "[^\\S]";
+        String input = "n\u0101ïve\ufeff";
+
+        REJavaUtilRegex jur = new REJavaUtilRegex(source, false, false, false, false, true);
+        jur.setInput(input);
+        boolean found = jur.find(0, false);
+        System.out.println("java.util.regex source: " + jur.javaUtilRegexSource);
+        System.out.println(found + " at: " + (found ? jur.start() : -1));
+        for (int i = 0; found && i <= jur.groupCount(); i++) {
+            System.out.println("group " + i + ": " + jur.group(i) + " : " + jur.matcher.start(i));
+        }
     }
 }

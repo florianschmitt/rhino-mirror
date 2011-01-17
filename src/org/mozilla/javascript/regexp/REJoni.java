@@ -39,8 +39,9 @@ public class REJoni implements RegExpEngine {
     private boolean ignoreCase;
     private boolean multiline;
 
-    // true if \s matches unicode byte-order-mark
-    private boolean bomWs;
+    // whitespace character class - may also get bom ufeff
+    private String wscc = "\\u0009-\\u000d\\u0020\\u0085\\u00a0\\u1680"
+        + "\\u180e\\u2000\\u2028\\u2029\\u202f\\u205f\\u3000";
 
     // joni regexp must be recompiled if RegExp.multiline
     // is different to multiline
@@ -106,7 +107,9 @@ public class REJoni implements RegExpEngine {
         this.global = global;
         this.ignoreCase = ignoreCase;
         this.multiline = multiline;
-        this.bomWs = bomWs;
+        if (bomWs) {
+            wscc += "\\ufeff";
+        }
 
         try {
             // escape or compile to joni syntax
@@ -301,13 +304,8 @@ public class REJoni implements RegExpEngine {
         // 1.      octal      => 'u00hh'
         // 2.      '\d':      => '[0-9]'
         // 3.      '\D':      => '[^0-9]'
-        // 4.      '\s':
-        //   c)               => '[\s\ufeff]'
-        //   cc+-)            => '\s\ufeff'
-        // 5.      '\S':
-        //   c)               => '[\S&&[^\ufeff]]'
-        //   cc+)             => '\S&&[^\ufeff]'
-        //   cc-)             => '[\S&&[^\ufeff]]'
+        // 4.      '\s':      => '[u0009-u000du0020u00a0u2028u2029]' ufeff?
+        // 5.      '\S':      => '[^u0009-u000du0020u00a0u2028u2029]' ufeff?
         // 6.      '\xhh'     => 'u00hh'
         // 7.      '\ u<bad>' => 'u<bad>'
         // 8.cc+-) '['        => '\['
@@ -383,30 +381,10 @@ public class REJoni implements RegExpEngine {
                     joni.append("[^0-9]"); // 3) '\D' => '[^0-9]'
                     break;
                 case 's':
-                    if (!bomWs) {
-                        joni.append("\\s");
-                        break;
-                    }
-                    if (inCC) { // 4.cc+- '\s' => '\s\ufeff'
-                        joni.append("\\s\\ufeff");
-                    } else { // 4.c '\s' => '[\s\ufeff]'
-                        joni.append("[\\s\\ufeff]");
-                    }
+                    joni.append('[').append(wscc).append(']');
                     break;
                 case 'S':
-                    if (!bomWs) {
-                        joni.append("\\S");
-                        break;
-                    }
-                    if (inCC) {
-                        if (negCC) { // 5.cc- '\S' => '[\S&&[^\ufeff]]'
-                            joni.append("[\\S&&[^\\ufeff]]");
-                        } else { // 5.cc+ '\S' => '\S&&[^\ufeff]'
-                            joni.append("\\S&&[^\\ufeff]");
-                        }
-                    } else { // 5.c '\S' => '[\S&&[^\ufeff]]'
-                        joni.append("[\\S&&[^\\ufeff]]");
-                    }
+                    joni.append('[').append('^').append(wscc).append(']');
                     break;
                 case 'x': // 6.* '\xhh' => 'u00hh'
                     joni.append("\\u00");
@@ -419,7 +397,6 @@ public class REJoni implements RegExpEngine {
                             char h = source.charAt(j);
                             if (h > 127 || !IS_HEX[h]) {
                                 baduhex = true;
-if (h > 127) System.out.println("bigger than 127: " + (int) h + " : " + source);
                                 break;
                             }
                         }
@@ -469,11 +446,13 @@ if (h > 127) System.out.println("bigger than 127: " + (int) h + " : " + source);
                     }
                 } else {
                     captureCount++;
-                    // set pos/neg look bitset
+                    // set neg look bitset
                     // count brackets inside lookahead so we
                     // know when lookahead finishes
                     if (inNegLook) {
-                        negLookCapBs |= (1 << captureCount);
+                        if (captureCount < 64) { // only support 63 captures
+                            negLookCapBs |= (1L << captureCount);
+                        }
                         negLookBrackets++;
                     }
                 }
@@ -486,12 +465,6 @@ if (h > 127) System.out.println("bigger than 127: " + (int) h + " : " + source);
                     inNegLook = negLookBrackets > 0;
                 }
                 joni.append(')');
-                break;
-            case '\n':
-                joni.append("\\n");
-                break;
-            case '\r':
-                joni.append("\\r");
                 break;
             default:
                 joni.append(c);
