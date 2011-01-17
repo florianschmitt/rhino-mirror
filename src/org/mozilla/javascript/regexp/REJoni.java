@@ -20,11 +20,18 @@ import org.joni.constants.MetaChar;
  */
 public class REJoni implements RegExpEngine {
     private static final char[] HEX = "0123456789abcdef".toCharArray();
+    private static final boolean[] IS_HEX = new boolean[128];
+    static {
+        char[] hex = "0123456789ABCDEFabcdef".toCharArray();
+        for (int i = 0; i < hex.length; i++) {
+            IS_HEX[hex[i]] = true;
+        }
+    }
 
     // original regexp source
     private String source;
     // source compiled to joni syntax
-    private String joniSource;
+    String joniSource;
     // joniSource.getBytes("UTF-8")
     private byte[] sourcebuf;
 
@@ -61,8 +68,6 @@ public class REJoni implements RegExpEngine {
 
     // bitset of negative lookahead captures
     long negLookCapBs = 0;
-    // bitset of positive lookahead captures
-    long posLookCapBs = 0;
 
     /** best fit JavaScript syntax for joni */
     public static final Syntax JavaScript = new Syntax(
@@ -200,7 +205,6 @@ public class REJoni implements RegExpEngine {
 
     private boolean findByte(int byteStart) {
         int index = matcher.search(byteStart, inputBuf.length, Option.NONE);
-
         region = matcher.getEagerRegion();
         if (index == -1) {
             return false;
@@ -230,32 +234,24 @@ public class REJoni implements RegExpEngine {
     }
 
     public String group(int group) {
-        // check for non-matching group
-        if (region.beg[group] == -1) {
-            return null;
-        }
-
         // ECMA 262 15.10.2.5 RepeatMatcher Step 4 - clear captures
         // if the start of any capture group is before the start of the prev
         // capture group, then clear it (set beg=-1)
-        // also clear if full match = '', unless capture in pos lookahead
         if (!capturesCleared) {
             int lastCaptureStart = 0;
-            boolean fullMatchEmptyString = region.beg[0] == region.end[0];
             for (int i = 1; i < region.numRegs; i++) {
-                if ((fullMatchEmptyString && (posLookCapBs & (1 << i)) == 0)
-                        || region.beg[i] < lastCaptureStart) {
-//System.out.println("clearing capture: " + i
-//        + ", fullMatchEmpty? " + fullMatchEmptyString
-//        + ", region.begin: " + region.beg[i]
-//        + ", lastCaptureStart: " + lastCaptureStart);
+                if (region.beg[i] < lastCaptureStart) {
                     region.beg[i] = -1;
                 } else {
-//System.out.println("setting last capture start for " + i + ", " + region.beg[i]);
                     lastCaptureStart = region.beg[i];
                 }
             }
             capturesCleared = true;
+        }
+
+        // check for non-matching group
+        if (region.beg[group] == -1) {
+            return null;
         }
 
         // convert between byte-pos and char-pos and return input.substr
@@ -297,35 +293,35 @@ public class REJoni implements RegExpEngine {
      * @param bomWs true if \s matches unicode byte-order-mark
      * @return equivalent regexp to be used by joni
      */
-    public String js2joni() {
+    private String js2joni() {
         // Translate regexp from js to joni.
         // Some symbols have different translations depending on whether
         // they are used as regular characters (c), or inside a character
         // class in either positive (cc+) or negated (cc-) form.
-        // 1.      octal   => 'u00hh'
-        // 2.      '\s':
-        //   c)            => '[\s\ufeff]'
-        //   cc+-)         => '\s\ufeff'
-        // 3.      '\S':
-        //   c)            => '[\S&&[^\ufeff]]'
-        //   cc+)          => '\S&&[^\ufeff]'
-        //   cc-)          => '[\S&&[^\ufeff]]'
-        // 4.*)    '\xhh'  => 'u00hh'
-        // 5.cc+-) '['     => '\['
-        // 6.c)    '[^]'   => '[\s\S]'
-        // 7. Remove invalid backreferences to negative lookaheads
+        // 1.      octal      => 'u00hh'
+        // 2.      '\d':      => '[0-9]'
+        // 3.      '\D':      => '[^0-9]'
+        // 4.      '\s':
+        //   c)               => '[\s\ufeff]'
+        //   cc+-)            => '\s\ufeff'
+        // 5.      '\S':
+        //   c)               => '[\S&&[^\ufeff]]'
+        //   cc+)             => '\S&&[^\ufeff]'
+        //   cc-)             => '[\S&&[^\ufeff]]'
+        // 6.      '\xhh'     => 'u00hh'
+        // 7.      '\ u<bad>' => 'u<bad>'
+        // 8.cc+-) '['        => '\['
+        // 9.c)    '[^]'      => '[\s\S]'
+        // 10.     Remove invalid backreferences to negative lookaheads
 
         StringBuilder joni = new StringBuilder();
         boolean inCC = false; // inside character class
         boolean negCC = false; // negated character class
         boolean inNegLook = false; // negative lookahead
-        boolean inPosLook = false; // positive lookahead
 
         int negLookBrackets = 0;
-        int posLookBrackets = 0;
         int captureCount = 0;
         negLookCapBs = 0;
-        posLookCapBs = 0;
 
         for (int i = 0; i < source.length(); i++) {
             char c = source.charAt(i);
@@ -380,14 +376,20 @@ public class REJoni implements RegExpEngine {
                         joni.append("\\u").append(u4);
                     }
                     break;
+                case 'd':
+                    joni.append("[0-9]"); // 2) '\d' => '[0-9]'
+                    break;
+                case 'D':
+                    joni.append("[^0-9]"); // 3) '\D' => '[^0-9]'
+                    break;
                 case 's':
                     if (!bomWs) {
                         joni.append("\\s");
                         break;
                     }
-                    if (inCC) { // 2.cc+- '\s' => '\s\ufeff'
+                    if (inCC) { // 4.cc+- '\s' => '\s\ufeff'
                         joni.append("\\s\\ufeff");
-                    } else { // 3.c '\s' => '[\s\ufeff]'
+                    } else { // 4.c '\s' => '[\s\ufeff]'
                         joni.append("[\\s\\ufeff]");
                     }
                     break;
@@ -397,24 +399,42 @@ public class REJoni implements RegExpEngine {
                         break;
                     }
                     if (inCC) {
-                        if (negCC) { // 3.cc- '\S' => '[\S&&[^\ufeff]]'
+                        if (negCC) { // 5.cc- '\S' => '[\S&&[^\ufeff]]'
                             joni.append("[\\S&&[^\\ufeff]]");
-                        } else { // 3.cc+ '\S' => '\S&&[^\ufeff]'
+                        } else { // 5.cc+ '\S' => '\S&&[^\ufeff]'
                             joni.append("\\S&&[^\\ufeff]");
                         }
-                    } else { // 3.c '\S' => '[\S&&[^\ufeff]]'
+                    } else { // 5.c '\S' => '[\S&&[^\ufeff]]'
                         joni.append("[\\S&&[^\\ufeff]]");
                     }
                     break;
-                case 'x': // 4.* '\xhh' => 'u00hh'
+                case 'x': // 6.* '\xhh' => 'u00hh'
                     joni.append("\\u00");
+                    break;
+                case 'u': // 7. '\ u<bad unicode>' => 'u<bad unicode>'
+                    boolean baduhex = i + 4 >= source.length();
+                    if (!baduhex) {
+                        int stop = i + 5;
+                        for (int j = i + 1; j < stop; j++) {
+                            char h = source.charAt(j);
+                            if (h > 127 || !IS_HEX[h]) {
+                                baduhex = true;
+if (h > 127) System.out.println("bigger than 127: " + (int) h + " : " + source);
+                                break;
+                            }
+                        }
+                    }
+                    if (!baduhex) {
+                        joni.append('\\');
+                    }
+                    joni.append('u');
                     break;
                 default: // leave the escape 'as-is'
                     joni.append('\\').append(c);
                 }
                 break;
             case '[':
-                if (inCC) { // 5.cc+- '[' => '\['
+                if (inCC) { // 8.cc+- '[' => '\['
                     joni.append("\\[");
                     break;
                 }
@@ -423,7 +443,7 @@ public class REJoni implements RegExpEngine {
                 if (source.length() > i + 1 && source.charAt(i + 1) == '^') {
                     // check for special match of '[^]'
                     if (source.length() > i + 2 && source.charAt(i + 2) == ']') {
-                        // 6.* '[^]' => '[\s\S]'
+                        // 9. '[^]' => '[\s\S]'
                         joni.append("[\\s\\S]");
                         i += 2;
                         break;
@@ -440,27 +460,21 @@ public class REJoni implements RegExpEngine {
                 joni.append(']');
                 break;
             case '(':
-                // 7. Remove invalid backreferences to negative lookaheads
+                // 10. Remove invalid backreferences to negative lookaheads
                 // count groups and take note of groups in neg lookahead
                 if (i+1 < source.length() && source.charAt(i + 1) == '?') {
                     if (i+2 < source.length() && source.charAt(i+2) == '!') {
                         inNegLook = true;
                         negLookBrackets++;
-                    } else if (i+2 < source.length() && source.charAt(i+2) == '=') {
-                        inPosLook = true;
-                        posLookBrackets++;
                     }
                 } else {
                     captureCount++;
                     // set pos/neg look bitset
-                    // count brackets inside pos/neg lookahead so we
+                    // count brackets inside lookahead so we
                     // know when lookahead finishes
                     if (inNegLook) {
                         negLookCapBs |= (1 << captureCount);
                         negLookBrackets++;
-                    } else if (inPosLook) {
-                        posLookCapBs |= (1 << captureCount);
-                        posLookBrackets++;
                     }
                 }
                 joni.append('(');
@@ -470,9 +484,6 @@ public class REJoni implements RegExpEngine {
                 if (inNegLook) {
                     negLookBrackets--;
                     inNegLook = negLookBrackets > 0;
-                } else if (inPosLook) {
-                    posLookBrackets--;
-                    inPosLook = posLookBrackets > 0;
                 }
                 joni.append(')');
                 break;
@@ -484,25 +495,25 @@ public class REJoni implements RegExpEngine {
     }
 
     public static void main(String[] args) throws Exception {
-        String source = "((\\3|b)\\2(a)x)+";
-        String input = "aaxabxbaxbbx";
+        String source = "(a|b*)*";
+        String input = "a";
         REJoni j = new REJoni(source, false, false, false, false, false);
         j.setInput(input);
         boolean found = j.find(0, false);
         System.out.println("joni source: " + j.joniSource);
-        System.out.println(found);
+        System.out.println(found + " at: " + j.start());
         for (int i = 0; i <= j.groupCount(); i++) {
             System.out.println("group " + i + ": " + j.group(i));
         }
 //        Regex regex = new Regex(source.getBytes(), 0, source.length(),
 //                Option.NONE, ASCIIEncoding.INSTANCE);
 //        Matcher matcher = regex.matcher(input.getBytes());
-//        int found = matcher.search(0, input.length(), Option.NONE);
-//        System.out.println("found at: " + found);
-//        Region region = matcher.getRegion();
+//        int index = matcher.search(0, input.length(), Option.NONE);
+//        System.out.println("found at: " + index);
+//        Region region = matcher.getEagerRegion();
 //        for (int i = 0; i < region.numRegs; i++) {
-//            System.out.println("region: " + i + ": ["
-//                + input.substring(region.beg[i], region.end[i]) + "]");
+//            String group = region.beg[i] != -1 ? input.substring(region.beg[i], region.end[i]) :  null;
+//            System.out.println("region: " + i + ": [" + group + "], " + region.beg[i] + "-" + region.end[i]);
 //        }
     }
 }

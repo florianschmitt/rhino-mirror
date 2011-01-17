@@ -19,6 +19,12 @@ public class REJoniTest extends TestCase {
        {"a(.)\\1\\2", "a(.)\\1\\u0002"},
        {"\\400", "\\u00200"},
        {"\\0\\0", "\\u0000\\u0000"},
+
+       // bad unicode escapes
+       {"\\u123", "\\\\u123"},
+       {"\\ug", "\\\\ug"},
+       {"\\u123g", "\\\\u123g"},
+       {"\\u123\uff11", "\\\\u123\uff11"},
    };
 
 
@@ -27,7 +33,7 @@ public class REJoniTest extends TestCase {
            REJoni joni = new REJoni(TESTS[i][0], false, false, false,
                    false, true);
            assertEquals("js2joni test: " + (i+1),
-                   TESTS[i][1], joni.js2joni());
+                   TESTS[i][1], joni.joniSource);
        }
    }
 }
