@@ -2541,6 +2541,39 @@ public class Context
         return regExpProxy;
     }
 
+    /**
+     * Set a RegExpEngine Factory for this Context.
+     * <p>
+     * The RegExpEngine Factory allows custom RegExp engines to be used.
+     * @see RegExpEngine
+     * @since TODO: since?
+     */
+    public final void setRegExpEngineFactory(
+            RegExpEngine.Factory regExpEngineFactory)
+    {
+        if (sealed) onSealedMutation();
+        if (regExpEngineFactory == null) throw new IllegalArgumentException();
+        this.regExpEngineFactory = regExpEngineFactory;
+    }
+
+    /**
+     * Return the current RegExpEngine Factory, or null if none is defined.
+     * @see RegExpEngine
+     * @since TODO: since?
+     */
+    public final RegExpEngine.Factory getRegExpEngineFactory()
+    {
+        if (regExpEngineFactory == null) {
+            Class<?> cl = Kit.classOrNull(
+                    "org.mozilla.javascript.regexp.RegExpEngineFactory");
+            if (cl != null) {
+                regExpEngineFactory =
+                    (RegExpEngine.Factory)Kit.newInstanceOrNull(cl);
+            }
+        }
+        return regExpEngineFactory;
+    }
+
     final boolean isVersionECMA1()
     {
         return version == VERSION_DEFAULT || version >= VERSION_1_3;
@@ -2626,6 +2659,7 @@ public class Context
     private ClassShutter classShutter;
     private ErrorReporter errorReporter;
     RegExpProxy regExpProxy;
+    RegExpEngine.Factory regExpEngineFactory;
     private Locale locale;
     private boolean generatingDebug;
     private boolean generatingDebugChanged;

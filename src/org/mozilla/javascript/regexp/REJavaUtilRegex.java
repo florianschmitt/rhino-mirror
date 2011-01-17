@@ -1,14 +1,20 @@
 package org.mozilla.javascript.regexp;
 
+import java.io.Serializable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.RegExpEngine;
 
 /**
  * RegExp engine using java.util.regex.
  *
  * @author Joel Hockey
  */
-public class REJavaUtilRegex implements RegExpEngine {
+public class REJavaUtilRegex implements RegExpEngine, Serializable {
+    private static final long serialVersionUID = 0x9DD472F6171676CDL;
+
     private static final char[] HEX = "0123456789abcdef".toCharArray();
 
     // original regexp source
@@ -303,8 +309,8 @@ public class REJavaUtilRegex implements RegExpEngine {
                 javaUtilRegex.append(']');
                 break;
             case '(':
-                if (i + 1 < source.length() && source.charAt(i + 1) == '?') {
-                    if (i + 2 < source.length() && source.charAt(i + 2) == '!') {
+                if (i+1 < source.length() && source.charAt(i+1) == '?') {
+                    if (i+2 < source.length() && source.charAt(i+2) == '!') {
                         inNegLook = true;
                         negLookBrackets++;
                     }
@@ -332,6 +338,16 @@ public class REJavaUtilRegex implements RegExpEngine {
             }
         }
         return javaUtilRegex.toString();
+    }
+
+    public static class Factory implements RegExpEngine.Factory {
+        public RegExpEngine create(Context cx, String source, boolean global,
+                boolean ignoreCase, boolean multiline, boolean literal,
+                boolean bomWs) {
+
+            return new REJavaUtilRegex(source, global, ignoreCase, multiline,
+                    literal, bomWs);
+        }
     }
 
     public static void main(String[] args) throws Exception {

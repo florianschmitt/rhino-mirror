@@ -1,5 +1,6 @@
 package org.mozilla.javascript.regexp;
 
+import java.io.Serializable;
 import java.io.UnsupportedEncodingException;
 
 import org.jcodings.Config;
@@ -12,13 +13,17 @@ import org.joni.Syntax;
 import org.joni.Syntax.MetaCharTable;
 import org.joni.WarnCallback;
 import org.joni.constants.MetaChar;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.RegExpEngine;
 
 /**
  * RegExp engine using joni.
  *
  * @author Joel Hockey
  */
-public class REJoni implements RegExpEngine {
+public class REJoni implements RegExpEngine, Serializable {
+    private static final long serialVersionUID = 0x5B8E7C3FBC5E3D3AL;
+
     private static final char[] HEX = "0123456789abcdef".toCharArray();
     private static final boolean[] IS_HEX = new boolean[128];
     static {
@@ -471,6 +476,17 @@ public class REJoni implements RegExpEngine {
             }
         }
         return joni.toString();
+    }
+
+    public static class Factory implements RegExpEngine.Factory {
+        public RegExpEngine create(Context cx, String source, boolean global,
+                boolean ignoreCase, boolean multiline, boolean literal,
+                boolean bomWs) {
+
+            return new REJoni(source, global, ignoreCase, multiline,
+                    literal, bomWs);
+        }
+
     }
 
     public static void main(String[] args) throws Exception {

@@ -45,6 +45,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.IdFunctionObject;
 import org.mozilla.javascript.IdScriptableObject;
+import org.mozilla.javascript.RegExpEngine;
 import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
@@ -305,9 +306,8 @@ public class NativeRegExp extends IdScriptableObject implements Function {
                 return new REIndexOf(source, compiled, global, multiline);
             }
         }
-return new REJoni(source, global, ignoreCase, multiline, escape, bomWs);
-//return new RERhino(cx, source, global, ignoreCase, multiline, escape);
-//return new REJavaUtilRegex(source, global, ignoreCase, multiline, escape, bomWs);
+        return cx.getRegExpEngineFactory().create(cx, source, global,
+                ignoreCase, multiline, escape, bomWs);
     }
 
     /*

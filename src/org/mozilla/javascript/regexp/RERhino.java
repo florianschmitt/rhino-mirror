@@ -43,6 +43,7 @@ package org.mozilla.javascript.regexp;
 
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Kit;
+import org.mozilla.javascript.RegExpEngine;
 import org.mozilla.javascript.ScriptRuntime;
 
 import java.io.Serializable;
@@ -2662,6 +2663,16 @@ public class RERhino implements RegExpEngine, Serializable {
         }
 
         return false;
+    }
+
+    public static class Factory implements RegExpEngine.Factory {
+        public RegExpEngine create(Context cx, String source, boolean global,
+                boolean ignoreCase, boolean multiline, boolean literal,
+                boolean bomWs) {
+
+            return new RERhino(cx, source, global, ignoreCase,
+                    multiline, literal);
+        }
     }
 }
 

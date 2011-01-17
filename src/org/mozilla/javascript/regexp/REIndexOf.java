@@ -1,6 +1,11 @@
 package org.mozilla.javascript.regexp;
 
-public class REIndexOf implements RegExpEngine {
+import java.io.Serializable;
+
+import org.mozilla.javascript.RegExpEngine;
+
+public class REIndexOf implements RegExpEngine, Serializable {
+    private static final long serialVersionUID = 0x2BF4F0CFB9A0DB91L;
 
     private String source;
     private String compiled;
