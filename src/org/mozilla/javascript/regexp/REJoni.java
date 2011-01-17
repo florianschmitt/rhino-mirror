@@ -487,6 +487,12 @@ if (h > 127) System.out.println("bigger than 127: " + (int) h + " : " + source);
                 }
                 joni.append(')');
                 break;
+            case '\n':
+                joni.append("\\n");
+                break;
+            case '\r':
+                joni.append("\\r");
+                break;
             default:
                 joni.append(c);
             }
