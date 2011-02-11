@@ -295,7 +295,7 @@ class TokenStream
     }
 
     final String getSourceString() { return sourceString; }
-    
+
     final int getLineno() { return lineno; }
 
     final String getString() { return string; }
@@ -541,8 +541,36 @@ class TokenStream
                 stringBufferTop = 0;
 
                 c = getChar();
-            strLoop: while (c != quoteChar) {
-                    if (c == '\n' || c == EOF_CHAR) {
+                // check for triple-quoted
+                boolean tripleQuoted = false;
+                if (c == quoteChar) {
+                    int tripleQuote = getChar();
+                    if (tripleQuote == c) {
+                        tripleQuoted = true;
+                        c = getChar();
+                    } else {
+                        ungetChar(tripleQuote);
+                    }
+                }
+
+            strLoop: while (true) {
+                    if (c == quoteChar) {
+                        if (!tripleQuoted) {
+                            break;
+                        }
+                        // check if end of triple quote
+                        int doubleQuote = getChar();
+                        if (doubleQuote == quoteChar) {
+                            int tripleQuote = getChar();
+                            if (tripleQuote == quoteChar) {
+                                break;
+                            }
+                            ungetChar(tripleQuote);
+                        }
+                        ungetChar(doubleQuote);
+                    }
+
+                    if ((c == '\n' && !tripleQuoted) || c == EOF_CHAR) {
                         ungetChar(c);
                         tokenEnd = cursor;
                         parser.addError("msg.unterminated.string.lit");
@@ -1264,7 +1292,7 @@ class TokenStream
         stringBuffer[N] = (char)c;
         stringBufferTop = N + 1;
     }
-    
+
     private boolean canUngetChar() {
         return ungetCursor == 0 || ungetBuffer[ungetCursor - 1] != '\n';
     }
