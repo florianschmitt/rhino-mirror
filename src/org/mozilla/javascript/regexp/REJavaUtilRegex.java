@@ -188,6 +188,7 @@ public class REJavaUtilRegex implements RegExpEngine, Serializable {
         //   cc-)        => '[u...]'
         // 7.      '[':
         //   cc+-)       => '\['
+        // 8.      '{'   => '\{' if not matching '{n}' or '{n,n}'
 
         StringBuilder javaUtilRegex = new StringBuilder();
         boolean inCC = false; // inside character class
@@ -333,11 +334,59 @@ public class REJavaUtilRegex implements RegExpEngine, Serializable {
                 }
                 javaUtilRegex.append(')');
                 break;
+            case '{':
+                 // 8.      '{'   => '\{' if not matching '{n}' or '{n,n}'
+                if (inCC) {
+                    javaUtilRegex.append(c); // leave cc as-is
+                    break;
+                }
+
+                int j = i + 1;
+                int numDigits = numDigits(j);
+                j += numDigits; // j points to char after digits
+                if (numDigits == 0 || j >= source.length()) {
+                    // no digits, or at end of source - escape
+                    javaUtilRegex.append("\\{");
+                    break;
+                }
+
+                if (source.charAt(j) == '}') {
+                    javaUtilRegex.append(c); // valid format '{n}'
+                    break;
+                } else if (source.charAt(j) != ',') {
+                    // bad format - escape
+                    javaUtilRegex.append("\\{");
+                    break;
+                }
+
+                // we have parsed '{n,' - now read more digits and '}'
+                numDigits = numDigits(++j);
+                j += numDigits; // j points to char after digits
+                if (numDigits > 0 && j < source.length() && source.charAt(j) == '}') {
+                    javaUtilRegex.append('{'); // valid format '{n,n}'
+                } else {
+                    // no digits, or at end of source, or not closed - escape
+                    javaUtilRegex.append("\\{");
+                }
+
+                break;
             default:
                 javaUtilRegex.append(c);
             }
         }
         return javaUtilRegex.toString();
+    }
+
+    private int numDigits(int i) {
+        int start = i;
+        while (i < source.length()) {
+            char c = source.charAt(i);
+            if (c < '0' || c > '9') {
+                break;
+            }
+            i++;
+        }
+        return i - start;
     }
 
     public static class Factory implements RegExpEngine.Factory {
