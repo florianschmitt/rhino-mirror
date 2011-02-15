@@ -1965,16 +1965,12 @@ public class ScriptRuntime {
             } else {
                 ScriptableObject.putProperty(bound, id, value);
             }
+            return value;
         } else {
             // See ES5 8.7.2
-            int[] linep = new int[1];
-            String filename = Context.getSourcePositionFromStack(linep);
-            throw new JavaScriptException(cx.newObject(scope, "ReferenceError",
-                    new Object[] { id }),
-                    filename,
-                    linep[0]);
+            String msg = "Assignment to undefined \"" + id + "\" in strict mode";
+            throw constructError("ReferenceError", msg);
         }
-        return value;
     }
 
     public static Object setConst(Scriptable bound, Object value,
