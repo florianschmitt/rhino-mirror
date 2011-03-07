@@ -188,7 +188,7 @@ public class REJavaUtilRegex implements RegExpEngine, Serializable {
         //   cc-)        => '[u...]'
         // 7.      '[':
         //   cc+-)       => '\['
-        // 8.      '{'   => '\{' if not matching '{n}' or '{n,n}'
+        // 8.      '{'   => '\{' if not matching '{n}', '{n,}' or '{n,n}'
 
         StringBuilder javaUtilRegex = new StringBuilder();
         boolean inCC = false; // inside character class
@@ -335,7 +335,7 @@ public class REJavaUtilRegex implements RegExpEngine, Serializable {
                 javaUtilRegex.append(')');
                 break;
             case '{':
-                 // 8.      '{'   => '\{' if not matching '{n}' or '{n,n}'
+                // 8.      '{'   => '\{' if not matching '{n}', '{n,}' or '{n,n}'
                 if (inCC) {
                     javaUtilRegex.append(c); // leave cc as-is
                     break;
@@ -359,13 +359,13 @@ public class REJavaUtilRegex implements RegExpEngine, Serializable {
                     break;
                 }
 
-                // we have parsed '{n,' - now read more digits and '}'
-                numDigits = numDigits(++j);
-                j += numDigits; // j points to char after digits
-                if (numDigits > 0 && j < source.length() && source.charAt(j) == '}') {
+                // we have parsed '{n,' - now read zero or more digits and '}'
+                j++; // move past ','
+                j += numDigits(j); // j points to char after digits
+                if (j < source.length() && source.charAt(j) == '}') {
                     javaUtilRegex.append('{'); // valid format '{n,n}'
                 } else {
-                    // no digits, or at end of source, or not closed - escape
+                    // at end of source, or not closing bracket - escape
                     javaUtilRegex.append("\\{");
                 }
 

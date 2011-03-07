@@ -49,6 +49,7 @@ import org.mozilla.javascript.RegExpEngine;
 import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+import org.mozilla.javascript.TopLevel;
 import org.mozilla.javascript.Undefined;
 
 
@@ -117,7 +118,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
     NativeRegExp(Scriptable scope, Object regexpEngine) {
         this.re = (RegExpEngine) regexpEngine;
         this.lastIndex = 0;
-        ScriptRuntime.setObjectProtoAndParent(this, scope);
+        ScriptRuntime.setBuiltinProtoAndParent(this, scope, TopLevel.Builtins.RegExp);
     }
 
     NativeRegExp() {
@@ -357,8 +358,7 @@ public class NativeRegExp extends IdScriptableObject implements Function {
              * matches, an index property telling the length of the left context,
              * and an input property referring to the input string.
              */
-            Scriptable scope = getTopLevelScope(scopeObj);
-            result = ScriptRuntime.newObject(cx, scope, "Array", null);
+            result = cx.newArray(scopeObj, 0);
             obj = (Scriptable) result;
 
             String matchstr = re.group(0);
