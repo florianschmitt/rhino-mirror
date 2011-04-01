@@ -304,7 +304,7 @@ public class ShellTest {
             status.setNegative();
         }
         final Throwable thrown[] = {null};
-        
+
         Thread t = new Thread(new Runnable()
         {
             public void run()

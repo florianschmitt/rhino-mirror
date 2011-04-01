@@ -456,7 +456,7 @@ public class RegExpImpl implements RegExpProxy {
     private static void do_replace(GlobData rdata, Context cx,
                                    RegExpImpl regExpImpl)
     {
-        StringBuffer charBuf = rdata.charBuf;
+        StringBuilder charBuf = rdata.charBuf;
         int cp = 0;
         String da = rdata.repstr;
         int dp = rdata.dollar;
@@ -744,6 +744,6 @@ final class GlobData
     Function      lambda;        /* replacement function object or null */
     String        repstr;        /* replacement string */
     int           dollar = -1;   /* -1 or index of first $ in repstr */
-    StringBuffer  charBuf;       /* result characters, null initially */
+    StringBuilder charBuf;       /* result characters, null initially */
     int           leftIndex;     /* leftContext index, always 0 for JS1.2 */
 }
