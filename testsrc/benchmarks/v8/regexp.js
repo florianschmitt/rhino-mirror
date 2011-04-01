@@ -36,8 +36,7 @@
 // affect how the regexps match their input.  Finally the strings are 
 // scrambled to exercise the regexp engine on different input strings.
 
-// renamed RegExp to Regexp to stop problems with rhino
-var Regexp = new BenchmarkSuite('RegExp', 910985, [
+var RegExp = new BenchmarkSuite('RegExp', 910985, [
   new Benchmark("RegExp", RegExpRun, RegExpSetup, RegExpTearDown)
 ]);
 

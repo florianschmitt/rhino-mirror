@@ -68,7 +68,6 @@ import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.event.*;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -79,13 +78,13 @@ import java.util.EventObject;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Properties;
-import java.util.Set;
 import java.io.*;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.TreePath;
 import java.lang.reflect.Method;
 
 import org.mozilla.javascript.Kit;
+import org.mozilla.javascript.ScriptRuntime;
 import org.mozilla.javascript.SecurityUtilities;
 
 import org.mozilla.javascript.tools.shell.ConsoleTextArea;
@@ -2091,69 +2090,6 @@ class FileHeader extends JPanel implements MouseListener {
  * An internal frame for script files.
  */
 class FileWindow extends JInternalFrame implements ActionListener {
-    // could use TokenStream#isKeyword() if it was public
-    private static Set<String> KEYWORDS = new HashSet<String>(Arrays.asList(
-            new String[] {
-                "abstract",
-                "boolean",
-                "break",
-                "byte",
-                "case",
-                "catch",
-                "char",
-                "class",
-                "const",
-                "continue",
-                "debugger",
-                "default",
-                "delete",
-                "do",
-                "double",
-                "else",
-                "enum",
-                "export",
-                "extends",
-                "false",
-                "final",
-                "finally",
-                "float",
-                "for",
-                "function",
-                "goto",
-                "if",
-                "implements",
-                "import",
-                "in",
-                "instanceof",
-                "int",
-                "interface",
-                "long",
-                "native",
-                "new",
-                "null",
-                "package",
-                "private",
-                "protected",
-                "public",
-                "return",
-                "short",
-                "static",
-                "super",
-                "switch",
-                "synchronized",
-                "this",
-                "throw",
-                "throws",
-                "transient",
-                "true",
-                "try",
-                "typeof",
-                "var",
-                "void",
-                "volatile",
-                "while",
-                "with"
-            }));
     private static final SimpleAttributeSet KEYWORD = new SimpleAttributeSet();
     private static final SimpleAttributeSet JAVADOC = new SimpleAttributeSet();
     private static final SimpleAttributeSet COMMENT = new SimpleAttributeSet();
@@ -2403,8 +2339,7 @@ class FileWindow extends JInternalFrame implements ActionListener {
                 while (++pos < text.length()
                         && Character.isJavaIdentifierPart(text.charAt(pos)));
                 String word = text.substring(start, pos);
-                // could use TokenStream#isKeyword() if it was public
-                if (!KEYWORDS.contains(word)) {
+                if (!ScriptRuntime.isKeyword(word)) {
                     continue;
                 }
                 style = KEYWORD;

@@ -64,7 +64,10 @@ public class ShellTest {
     public static final FileFilter TEST_FILTER = new FileFilter() {
         public boolean accept(File pathname)
         {
-            return pathname.getName().endsWith(".js") && !pathname.getName().equals("shell.js") && !pathname.getName().equals("browser.js") && !pathname.getName().equals("template.js");
+            return pathname.getName().endsWith(".js")
+                    && !pathname.getName().equals("shell.js")
+                    && !pathname.getName().equals("browser.js")
+                    && !pathname.getName().equals("template.js");
         }
     };
 
@@ -294,6 +297,8 @@ public class ShellTest {
                 new String[] { "options" }, ShellTest.class,
                 ScriptableObject.DONTENUM | ScriptableObject.PERMANENT |
                   ScriptableObject.READONLY);
+        // test suite expects keywords to be disallowed as identifiers
+        shellContextFactory.setAllowReservedKeywords(false);
         final TestState testState = new TestState();
         if (jsFile.getName().endsWith("-n.js")) {
             status.setNegative();

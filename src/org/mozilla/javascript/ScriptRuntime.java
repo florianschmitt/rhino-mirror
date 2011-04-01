@@ -770,6 +770,15 @@ public class ScriptRuntime {
     }
 
     /**
+     * Return true if given string is a keyword 'abstract', 'boolean', 'break', etc
+     * @param s string to compare
+     * @return true if given string as a keyword
+     */
+    public static boolean isKeyword(String s) {
+        return TokenStream.isKeyword(s);
+    }
+
+    /**
      * Convert the value to a string.
      *
      * See ECMA 9.8.
@@ -4065,11 +4074,11 @@ public class ScriptRuntime {
      */
     public static JavaScriptException throwError(Context cx, Scriptable scope,
             String message) {
+      int[] linep = { 0 };
+      String filename = Context.getSourcePositionFromStack(linep);
         final Scriptable error = newBuiltinObject(cx, scope,
-                TopLevel.Builtins.Error, new Object[] { message });
-        return new JavaScriptException(error,
-                ScriptableObject.getTypedProperty(error, "fileName", String.class),
-                ScriptableObject.getTypedProperty(error, "lineNumber", Number.class).intValue());
+                TopLevel.Builtins.Error, new Object[] { message, filename, Integer.valueOf(linep[0]) });
+        return new JavaScriptException(error, filename, linep[0]);
     }
 
     public static final Object[] emptyArgs = new Object[0];
