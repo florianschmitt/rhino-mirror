@@ -344,9 +344,9 @@ public class RegExpImpl implements RegExpProxy {
             lambdaStr = null;
         }
 
-        StringBuffer charBuf = rdata.charBuf;
+        StringBuilder charBuf = rdata.charBuf;
         if (charBuf == null) {
-            charBuf = new StringBuffer();
+            charBuf = new StringBuilder();
             rdata.charBuf = charBuf;
         }
 
