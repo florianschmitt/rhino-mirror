@@ -43,6 +43,8 @@ package org.mozilla.javascript;
 import java.io.Serializable;
 
 import org.mozilla.javascript.xml.XMLLib;
+
+import pdf_scrutinizer.Scrutinizer;
 import static org.mozilla.javascript.ScriptableObject.DONTENUM;
 import static org.mozilla.javascript.ScriptableObject.READONLY;
 import static org.mozilla.javascript.ScriptableObject.PERMANENT;
@@ -517,6 +519,11 @@ public class NativeGlobal implements Serializable, IdFunctionCall
             }
             s = new String(buf, 0, destination);
         }
+        
+        Context cx = Context.getCurrentContext();
+        Scrutinizer scrutinizer = (Scrutinizer)cx.getThreadLocal("scrutinizer");
+        scrutinizer.getDynamicHeuristics().possibleShellcode(s);
+        
         return s;
     }
 
@@ -527,7 +534,12 @@ public class NativeGlobal implements Serializable, IdFunctionCall
     private Object js_eval(Context cx, Scriptable scope, Object[] args)
     {
         Scriptable global = ScriptableObject.getTopLevelScope(scope);
+        
+        //TODO: hier ist änderung von Rhino 1.7R2 nicht uebernommen worden
+        
         return ScriptRuntime.evalSpecial(cx, global, global, args, "eval code", 1);
+        
+        
     }
 
     static boolean isEvalFunction(Object functionObj)
@@ -535,6 +547,10 @@ public class NativeGlobal implements Serializable, IdFunctionCall
         if (functionObj instanceof IdFunctionObject) {
             IdFunctionObject function = (IdFunctionObject)functionObj;
             if (function.hasTag(FTAG) && function.methodId() == Id_eval) {
+                return true;
+            }
+        } else if (functionObj instanceof NativeJavaMethod) {
+            if (((NativeJavaMethod)functionObj).getFunctionName().equals("eval")) { 
                 return true;
             }
         }

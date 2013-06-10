@@ -52,6 +52,8 @@ import org.mozilla.javascript.ast.ScriptNode;
 import org.mozilla.javascript.ast.Jump;
 import org.mozilla.javascript.ast.FunctionNode;
 
+import pdf_scrutinizer.Scrutinizer;
+
 /**
  * Generates bytecode for the Interpreter.
  */
@@ -96,15 +98,23 @@ class CodeGenerator extends Icode {
         this.compilerEnv = compilerEnv;
 
         if (Token.printTrees) {
-            System.out.println("before transform:");
-            System.out.println(tree.toStringTree(tree));
+            Context cx = Context.getCurrentContext();
+            Scrutinizer scrutinizer = (Scrutinizer)cx.getThreadLocal("scrutinizer");
+            scrutinizer.getOutput().treeICode("before transform:\n");
+            scrutinizer.getOutput().treeICode(tree.toStringTree(tree));
+//            System.out.println("before transform:");
+//            System.out.println(tree.toStringTree(tree));
         }
 
         new NodeTransformer().transform(tree);
 
         if (Token.printTrees) {
-            System.out.println("after transform:");
-            System.out.println(tree.toStringTree(tree));
+            Context cx = Context.getCurrentContext();
+            Scrutinizer scrutinizer = (Scrutinizer)cx.getThreadLocal("scrutinizer");
+            scrutinizer.getOutput().treeICode("after transform:\n");
+            scrutinizer.getOutput().treeICode(tree.toStringTree(tree));
+//            System.out.println("after transform:");
+//            System.out.println(tree.toStringTree(tree));
         }
 
         if (returnFunction) {

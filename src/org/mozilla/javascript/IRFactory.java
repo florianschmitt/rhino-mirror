@@ -46,6 +46,8 @@ package org.mozilla.javascript;
 
 import org.mozilla.javascript.ast.*;
 
+import pdf_scrutinizer.Scrutinizer;
+
 import java.util.List;
 import java.util.ArrayList;
 
@@ -89,8 +91,12 @@ public final class IRFactory extends Parser
         int sourceStartOffset = decompiler.getCurrentOffset();
 
         if (Token.printTrees) {
-            System.out.println("IRFactory.transformTree");
-            System.out.println(root.debugPrint());
+            Context cx = Context.getCurrentContext();
+            Scrutinizer scrutinizer = (Scrutinizer)cx.getThreadLocal("scrutinizer");
+            scrutinizer.getOutput().treeICode("IRFactory.transformTree\n");
+            scrutinizer.getOutput().treeICode(root.debugPrint());
+//            System.out.println("IRFactory.transformTree");
+//            System.out.println(root.debugPrint());
         }
         ScriptNode script = (ScriptNode)transform(root);
 

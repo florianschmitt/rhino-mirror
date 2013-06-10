@@ -48,6 +48,8 @@ import org.mozilla.javascript.ast.Jump;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.ast.ScriptNode;
 
+import pdf_scrutinizer.Scrutinizer;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -88,7 +90,7 @@ public class NodeTransformer
         tree.flattenSymbolTable(!createScopeObjects);
 
         //uncomment to print tree before transformation
-        if (Token.printTrees) System.out.println(tree.toStringTree(tree));
+        //if (Token.printTrees) System.out.println(tree.toStringTree(tree));
         boolean inStrictMode = tree instanceof AstRoot &&
                                ((AstRoot)tree).isInStrictMode();
         transformCompilationUnit_r(tree, tree, tree, createScopeObjects,

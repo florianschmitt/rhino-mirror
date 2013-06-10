@@ -51,10 +51,15 @@ import java.io.Serializable;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.mozilla.javascript.ast.FunctionNode;
 import org.mozilla.javascript.ast.ScriptNode;
 import org.mozilla.javascript.ScriptRuntime.NoSuchMethodShim;
 import org.mozilla.javascript.debug.DebugFrame;
+
+import pdf_scrutinizer.Scrutinizer;
+import pdf_scrutinizer.API.app.Doc;
 
 public final class Interpreter extends Icode implements Evaluator
 {
@@ -325,11 +330,19 @@ public final class Interpreter extends Icode implements Evaluator
         byte iCode[] = idata.itsICode;
         int iCodeLength = iCode.length;
         String[] strings = idata.itsStringTable;
-        PrintStream out = System.out;
+        //PrintStream out = System.out;
+
+        Context cx = Context.getCurrentContext();
+        Scrutinizer scrutinizer = (Scrutinizer)cx.getThreadLocal("scrutinizer");
+		if (scrutinizer.getOutput().getStaticICodePrintStream() == null)
+			return;
+		PrintStream out = scrutinizer.getOutput().getStaticICodePrintStream();
+		
         out.println("ICode dump, for " + idata.itsName
                     + ", length = " + iCodeLength);
         out.println("MaxStack = " + idata.itsMaxStack);
 
+        
         int indexReg = 0;
         for (int pc = 0; pc < iCodeLength; ) {
             out.flush();
@@ -917,6 +930,11 @@ public final class Interpreter extends Icode implements Evaluator
     private static Object interpretLoop(Context cx, CallFrame frame,
                                         Object throwable)
     {
+        Log log = LogFactory.getLog(Interpreter.class);
+        StringBuilder sb = new StringBuilder();
+        Scrutinizer scrutinizer = (Scrutinizer)cx.getThreadLocal("scrutinizer");
+        int counter = 0;
+    	
         // throwable holds exception object to rethrow or catch
         // It is also used for continuation restart in which case
         // it holds ContinuationJump
@@ -1008,6 +1026,74 @@ public final class Interpreter extends Icode implements Evaluator
                     // exception handler
                     int op = iCode[frame.pc++];
                     jumplessRun: {
+
+                    	
+                    	
+ // print byte code dynamically
+                   
+ if (scrutinizer.getOutput().getSaveDynamicICode()) {
+     if (op > 0) {
+         sb.append(" [" + frame.pc + "] " + Token.name(op) + "\n");
+     } else {
+         sb.append(" [" + frame.pc + "] " + bytecodeName(op));
+         switch(op) {
+             case Icode_REG_STR1:
+                 String str = strings[0xFF & iCode[frame.pc]];
+                 sb.append(" \"" + str + '"');
+                 break;
+             case Icode_REG_STR2:
+                 sb.append(" \"" + strings[getIndex(iCode, frame.pc)] + '"');
+                 break;
+             case Icode_REG_STR4:
+                 sb.append(" \"" + strings[getInt(iCode, frame.pc)] + '"');
+                 break;
+             case Icode_REG_STR_C0: 
+ 			    sb.append(" \"" + strings[0] + '"'); 
+ 			    break;
+             case Icode_REG_STR_C1: 
+                 sb.append(" \"" + strings[1] + '"');
+                 break;
+             case Icode_REG_STR_C2: 
+                 sb.append(" \"" + strings[2] + '"');            
+                 break; 
+             case Icode_REG_STR_C3: 
+                 sb.append(" \"" + strings[3] + '"');
+                 break;
+         }
+         sb.append("\n");
+     }
+ }
+ 
+ if (log.isDebugEnabled()) {
+ 	if (++counter % 100000 == 0) {
+ 	    log.debug("instructions counter: " + counter);
+ 	}
+ }
+ 
+ if (sb.length() > 100000) {
+ 	if (scrutinizer.getOutput().getSaveDynamicICode()) {
+ 		scrutinizer.getOutput().dynamicICode(sb.toString());
+ 	}
+     sb.setLength(0);
+ }
+ 
+ //really simple infinite loop detection
+ // 
+ //BYTE CODE:
+ //[58] ONE
+ //[59] IFEQ 58
+ if (op == Token.IFEQ) {
+ 	boolean result = stack_boolean(frame, stackTop);
+ 	if (result) {
+ 		int offset = getShort(iCode, frame.pc);
+ 		if (offset == -1) {
+ 			scrutinizer.getAnalysisResult().suspicious();
+ 			throw new EvaluatorException("infinite loop detected");
+ 		}
+ 	}
+ }
+
+
 
     // Back indent to ease implementation reading
 switch (op) {
@@ -1358,6 +1444,8 @@ switch (op) {
         continue Loop;
     case Token.STRICT_SETNAME:
     case Token.SETNAME : {
+    	scrutinizer.getDynamicHeuristics().setname(stack[stackTop]);
+    	
         Object rhs = stack[stackTop];
         if (rhs == DBL_MRK) rhs = ScriptRuntime.wrapNumber(sDbl[stackTop]);
         --stackTop;
@@ -1445,6 +1533,12 @@ switch (op) {
         }
         Object value;
         Object id = stack[stackTop + 1];
+        
+        if (scrutinizer.getDynamicHeuristics().setelem(lhs, rhs)) {
+            stack[stackTop] = rhs;
+            continue Loop;
+        }
+        
         if (id != DBL_MRK) {
             value = ScriptRuntime.setObjectElem(lhs, id, rhs, cx);
         } else {
@@ -1701,6 +1795,90 @@ switch (op) {
         stack[stackTop] = fun.call(cx, calleeScope, funThisObj, 
                 getArgsArray(stack, sDbl, stackTop + 2, indexReg));
 
+//      if (stack[stackTop] instanceof NativeJavaObject) { // app.eval(...) called and hooked
+//      NativeJavaObject o = (NativeJavaObject)stack[stackTop];
+//      if (o.javaObject instanceof pdf_scrutinizer.Report) {
+//      	Object[] code = ((pdf_scrutinizer.Report)o.javaObject).info;
+//      	stack[stackTop] = ScriptRuntime.evalSpecial(cx, frame.scope, frame.thisObj, code, "eval code", 1);          
+//      }
+//  } else if (stack[stackTop] instanceof ScriptableNativeJavaObject) { // app.setTimeout(...) called and hooked
+//      ScriptableNativeJavaObject o = (ScriptableNativeJavaObject)stack[stackTop];
+//      if (o.prototype.javaObject instanceof pdf_scrutinizer.Report) {
+//      	Object[] code = ((pdf_scrutinizer.Report)o.prototype.javaObject).info;
+//      	stack[stackTop] = ScriptRuntime.evalSpecial(cx, frame.scope, frame.thisObj, code, "eval code", 1);             
+//      }
+//  }
+  /* !eval hooking */
+
+  if (fun instanceof BaseFunction) {         
+      StringBuilder sb2 = new StringBuilder();
+      
+      if (funThisObj instanceof BaseFunction) {
+      	sb2.append(((BaseFunction)funThisObj).getFunctionName() + ".");
+      } else if (funThisObj instanceof NativeNumber) {
+      	NativeNumber a = (NativeNumber)funThisObj;
+      	a.toString();
+      	
+      } else if (funThisObj instanceof NativeString) {
+      	
+      } else if (funThisObj instanceof Doc) {
+      	
+      }
+      
+      sb2.append(((BaseFunction)fun).getFunctionName() + "(");
+      
+      Object[] args = getArgsArray(stack, sDbl, stackTop + 2, indexReg);
+      for (Object x : args) {
+      	if (x instanceof String) {
+      		String y = (String)x;
+      		if (y.length() > 10000) {
+      			y = y.substring(0, 10000);
+      		}
+      		sb2.append("'" + y + "'" + ", ");
+      	} else {
+      		sb2.append("'" + x + "'" + ", ");
+      	}
+      }
+      
+      String result;
+      if (stack[stackTop] instanceof String) {
+      	result = (String)stack[stackTop];
+  		if (result.length() > 10000) {
+  			result = result.substring(0, 10000);
+  		}
+      } else if (stack[stackTop] instanceof Undefined) {
+			result = "";
+      } else if (stack[stackTop] == null) {
+      	result = "";
+      } else {
+      	result = stack[stackTop].toString();
+      }
+      
+      StringBuilder sb3 = new StringBuilder();
+      
+      if (args.length > 0) {
+          sb3.append(sb2.toString().substring(0, sb2.length() - 2) + ")");
+          if (result != "") {
+          	sb3.append(" = " + result + "\n");
+          }
+      } else {
+      	sb3.append(sb2.toString() + ")");
+          if (result != "") {
+          	sb3.append(" = " + result + "\n");
+          }
+      }
+      scrutinizer.getOutput().functionCalls(sb3.toString());
+  } else {
+      StringBuilder sb2 = new StringBuilder();
+      sb2.append("CALL: ");
+      Object[] args = getArgsArray(stack, sDbl, stackTop + 2, indexReg);
+      for (Object x : args) {
+          sb2.append(x + ", ");
+      }
+      sb2.setLength(sb2.length() - 2);
+      System.out.println(sb2.toString());
+  }
+        
         continue Loop;
     }
     case Token.NEW : {
@@ -1815,6 +1993,8 @@ switch (op) {
         indexReg = iCode[frame.pc++];
         // fallthrough
     case Token.SETVAR :
+        scrutinizer.getDynamicHeuristics().set_var(stack[stackTop]);
+        
         if (!frame.useActivation) {
             if ((varAttributes[indexReg] & ScriptableObject.READONLY) == 0) {
                 vars[indexReg] = stack[stackTop];
@@ -2172,6 +2352,7 @@ switch (op) {
         continue Loop;
     case Icode_REG_STR1:
         stringReg = strings[0xFF & iCode[frame.pc]];
+        scrutinizer.getDynamicHeuristics().reg_str_1(stringReg);
         ++frame.pc;
         continue Loop;
     case Icode_REG_STR2:
@@ -2353,6 +2534,10 @@ switch (op) {
             break StateLoop;
 
         } // end of StateLoop: for(;;)
+        
+        if (scrutinizer.getOutput().getSaveDynamicICode()) {
+            scrutinizer.getOutput().dynamicICode(sb.toString());
+        }
 
         // Do cleanups/restorations before the final return or throw
 
