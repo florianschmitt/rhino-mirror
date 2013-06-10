@@ -48,8 +48,6 @@ import org.mozilla.javascript.ast.Jump;
 import org.mozilla.javascript.ast.Scope;
 import org.mozilla.javascript.ast.ScriptNode;
 
-import pdf_scrutinizer.Scrutinizer;
-
 import java.util.ArrayList;
 import java.util.List;
 

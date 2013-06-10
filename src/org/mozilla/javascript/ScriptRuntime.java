@@ -59,7 +59,7 @@ import org.mozilla.javascript.ast.FunctionNode;
 import org.mozilla.javascript.xml.XMLObject;
 import org.mozilla.javascript.xml.XMLLib;
 
-import pdf_scrutinizer.Scrutinizer;
+import de.pdf_scrutinizer.Scrutinizer;
 
 /**
  * This is the class that implements the runtime.
@@ -1020,10 +1020,10 @@ public class ScriptRuntime {
      */
     public static Scriptable toObject(Context cx, Scriptable scope, Object val)
     {
-    	if (val != null && val instanceof String && ((String)val).equals("this")) {
-    		return cx.topCallScope;
-    	}
-    	
+        if (val != null && val instanceof String && ((String) val).equals("this")) {
+            return cx.topCallScope;
+        }
+
         if (val instanceof Scriptable) {
             return (Scriptable) val;
         }
@@ -1492,14 +1492,14 @@ public class ScriptRuntime {
         }
 
         if (result == Scriptable.NOT_FOUND) {
-        	//XXX
-        	// that means if an objects property "eval" gets called,
-        	// we return the eval() function.
-        	if (s != null && s.equals("eval")) {
-        		result = cx.topCallScope.get("eval", cx.topCallScope);
-        	} else {
-        		result = Undefined.instance;
-        	}
+            //XXX
+            // that means if an objects property "eval" gets called,
+            // we return the eval() function.
+            if (s != null && s.equals("eval")) {
+                result = cx.topCallScope.get("eval", cx.topCallScope);
+            } else {
+                result = Undefined.instance;
+            }
         }
 
         return result;
@@ -2593,10 +2593,10 @@ public class ScriptRuntime {
             Context.reportWarning(message);
             return x;
         }
-        
-        Scrutinizer scrutinizer = (Scrutinizer)cx.getThreadLocal("scrutinizer");
-        scrutinizer.getOutput().eval((String)x);
-        scrutinizer.getStaticAnalysis().doit((String)x);
+
+        Scrutinizer scrutinizer = (Scrutinizer) cx.getThreadLocal("scrutinizer");
+        scrutinizer.getOutput().eval((String) x);
+        scrutinizer.getStaticAnalysis().doit((String) x);
         
         if (filename == null) {
             int[] linep = new int[1];

@@ -44,7 +44,7 @@ import java.io.Serializable;
 
 import org.mozilla.javascript.xml.XMLLib;
 
-import pdf_scrutinizer.Scrutinizer;
+import de.pdf_scrutinizer.Scrutinizer;
 import static org.mozilla.javascript.ScriptableObject.DONTENUM;
 import static org.mozilla.javascript.ScriptableObject.READONLY;
 import static org.mozilla.javascript.ScriptableObject.PERMANENT;
@@ -535,7 +535,7 @@ public class NativeGlobal implements Serializable, IdFunctionCall
     {
         Scriptable global = ScriptableObject.getTopLevelScope(scope);
         
-        //TODO: hier ist änderung von Rhino 1.7R2 nicht uebernommen worden
+        //TODO: here is a change missing from Rhino 1.7R2...
         
         return ScriptRuntime.evalSpecial(cx, global, global, args, "eval code", 1);
         
